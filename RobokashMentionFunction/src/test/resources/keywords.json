@@ -1,0 +1,16 @@
+{
+  "keywords": [
+    {
+      "value": "duck",
+      "probability": 0.1
+    },
+    {
+      "value": "pig",
+      "probability": 0.2
+    },
+    {
+      "value": "bee",
+      "probability": 0.05
+    }
+  ]
+}
