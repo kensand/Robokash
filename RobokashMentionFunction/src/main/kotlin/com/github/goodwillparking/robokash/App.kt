@@ -1,12 +1,19 @@
 package com.github.goodwillparking.robokash
 
 import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.github.goodwillparking.robokash.slack.PostMessage
 import java.io.BufferedReader
+import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStreamReader
+import java.net.HttpURLConnection
 import java.net.URL
 import java.util.HashMap
 import java.util.stream.Collectors
@@ -14,29 +21,77 @@ import java.util.stream.Collectors
 /**
  * Handler for requests to Lambda function.
  */
-class App : RequestHandler<APIGatewayProxyRequestEvent?, APIGatewayProxyResponseEvent> {
+class App : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    override fun handleRequest(input: APIGatewayProxyRequestEvent?, context: Context?): APIGatewayProxyResponseEvent {
-        val headers: MutableMap<String, String> = HashMap()
-        headers["Content-Type"] = "application/json"
-        headers["X-Custom-Header"] = "application/json"
-        val response = APIGatewayProxyResponseEvent()
-            .withHeaders(headers)
-        return try {
-            val pageContents = getPageContents("https://checkip.amazonaws.com")
-            val output = String.format("{ \"message\": \"hello world\", \"location\": \"%s\" }", pageContents)
-            response
+    private val objectMapper = ObjectMapper().registerModule(KotlinModule())
+
+    override fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
+
+        val log = context.logger
+
+        log.log("INPUT: $input")
+
+        // TODO: auth request
+
+        if ("X-Slack-Retry-Num" in input.headers) {
+            // Slack will retry up to 3 times (4 total attempts).
+            // Robokash can be a bit slow, so he might timeout and trigger some retries.
+            // Ignore the retries because Robokash probably got the initial request
+            // and is just taking his sweet time to respond.
+            // https://api.slack.com/events-api#the-events-api__field-guide__error-handling__graceful-retries
+            log.log("This is a retry from Slack, ignore it.")
+            return APIGatewayProxyResponseEvent()
+                // Ask Slack to pls stahp
+                // https://api.slack.com/events-api#the-events-api__field-guide__error-handling__graceful-retries__turning-retries-off
+                .withHeaders(mapOf("X-Slack-No-Retry" to "1"))
                 .withStatusCode(200)
-                .withBody(output)
-        } catch (e: IOException) {
-            response
-                .withBody("{}")
-                .withStatusCode(500)
         }
+
+        val root = objectMapper.readTree(input.body)
+
+        if (root["type"]?.textValue() == "url_verification") {
+            log.log("URL verification request")
+            return APIGatewayProxyResponseEvent()
+                .withStatusCode(200)
+                .withBody(root["challenge"]?.textValue())
+        }
+
+        respond(root, log)
+
+        return APIGatewayProxyResponseEvent().withStatusCode(200)
     }
 
-    private fun getPageContents(address: String): String =
-        BufferedReader(InputStreamReader(URL(address).openStream())).use { br ->
-            br.lines().collect(Collectors.joining(System.lineSeparator()))
+    private fun verify() {
+
+    }
+
+    private fun respond(request: JsonNode, log: LambdaLogger) {
+        var connection: HttpURLConnection? = null
+
+        try {
+            //Create connection
+            val url = URL("https://slack.com/api/chat.postMessage")
+            connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "POST"
+            // https://api.slack.com/web#slack-web-api__basics__post-bodies__json-encoded-bodies
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("Authorization", "Bearer ${System.getenv("BOT_ACCESS_TOKEN")}")
+            connection.doOutput = true
+
+            val channel = request["event"]["channel"].textValue()
+
+            //Send request
+            DataOutputStream(connection.outputStream).use {
+                it.writeBytes(objectMapper.writeValueAsString(PostMessage(channel, "Dude!")))
+            }
+
+            //Get Response
+            val r = connection.inputStream.use { stream ->
+                InputStreamReader(stream).useLines { it.joinToString(System.lineSeparator()) }
+            }
+            log.log("POST response: $r")
+        } finally {
+            connection?.disconnect()
         }
+    }
 }

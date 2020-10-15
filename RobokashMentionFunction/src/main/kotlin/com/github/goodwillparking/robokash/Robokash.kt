@@ -29,7 +29,7 @@ data class Robokash(
         if (role(random, role.probability)) responses.random(random).contents else null
 
     fun decideResponse(random: Random, role: KeywordRoll): String? {
-
+        return TODO()
     }
 
     fun role(random: Random, probability: Double): Boolean =
