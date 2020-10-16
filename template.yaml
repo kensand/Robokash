@@ -19,6 +19,7 @@ Resources:
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
           BOT_ACCESS_TOKEN: '{{resolve:ssm:robokash-dev-token:1}}'
+          BOT_SIGNING_SECRET: '{{resolve:ssm:robokash-dev-signing-secret:1}}'
       Events:
         RobokashMention:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api

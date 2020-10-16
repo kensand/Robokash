@@ -8,20 +8,23 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.github.goodwillparking.robokash.slack.Auth
 import com.github.goodwillparking.robokash.slack.PostMessage
-import java.io.BufferedReader
 import java.io.DataOutputStream
-import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.HashMap
-import java.util.stream.Collectors
 
 /**
  * Handler for requests to Lambda function.
  */
 class App : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    companion object {
+        // It is always v0
+        // https://api.slack.com/authentication/verifying-requests-from-slack#verifying-requests-from-slack-using-signing-secrets__a-recipe-for-security__how-to-make-a-request-signature-in-4-easy-steps-an-overview
+        private const val authVersion = "v0"
+    }
 
     private val objectMapper = ObjectMapper().registerModule(KotlinModule())
 
@@ -31,7 +34,7 @@ class App : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseE
 
         log.log("INPUT: $input")
 
-        // TODO: auth request
+        verify(input, log)?.also { return it }
 
         if ("X-Slack-Retry-Num" in input.headers) {
             // Slack will retry up to 3 times (4 total attempts).
@@ -61,8 +64,24 @@ class App : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseE
         return APIGatewayProxyResponseEvent().withStatusCode(200)
     }
 
-    private fun verify() {
+    private fun verify(input: APIGatewayProxyRequestEvent, log: LambdaLogger): APIGatewayProxyResponseEvent? {
+        val timestamp = requireNotNull(input.headers["X-Slack-Request-Timestamp"]) { "Missing timestamp header" }
+        val requestSig = requireNotNull(input.headers["X-Slack-Signature"]) { "Missing signature header" }
+        
+        val sig = Auth.produceSignature(
+            key = System.getenv("BOT_SIGNING_SECRET"),
+            body = input.body,
+            timestamp = timestamp,
+            version = authVersion
+        )
 
+        return if (!requestSig.equals(sig, ignoreCase = true)) {
+            log.log("Unauthorized request: $sig")
+            APIGatewayProxyResponseEvent()
+                // In case this really was Slack and we've got a bug in our auth code, ask Slack to stop retrying.
+                .withHeaders(mapOf("X-Slack-No-Retry" to "1"))
+                .withStatusCode(403)
+        } else null
     }
 
     private fun respond(request: JsonNode, log: LambdaLogger) {
