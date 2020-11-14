@@ -45,7 +45,11 @@ class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
                 .build()
         )
 
-        val mentionApi = HttpApi(this, "MentionApi")
+        val mentionApi = HttpApi(
+            this,
+            "MentionApi",
+            HttpApiProps.builder().description("$id api invoked when the bot is mentioned (@bot-name)").build()
+        )
 
         mentionApi.addRoutes(AddRoutesOptions.builder()
             .integration(mentionIntegration)
