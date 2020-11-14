@@ -8,8 +8,8 @@ fun main() {
 
     val app = App()
 
-    RobokashStack(app, "foo")
-    RobokashStack(app, "bar")
+    RobokashStack(app, "Robokash-dev")
+//    RobokashStack(app, "bar")
 
     app.synth()
 }

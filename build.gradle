@@ -19,11 +19,14 @@ def CDK_VERSION = "1.71.0"
 dependencies {
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.0'
     implementation 'com.amazonaws:aws-lambda-java-events:3.1.0'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    compile "com.fasterxml.jackson.core:jackson-core:2.11.3"
-    compile "com.fasterxml.jackson.core:jackson-databind:2.11.3"
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.11.3"
-    compile "software.amazon.awscdk:core:${CDK_VERSION}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.10"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.4.10"
+    implementation "com.fasterxml.jackson.core:jackson-core:2.11.3"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.11.3"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.11.3"
+    implementation "software.amazon.awscdk:core:${CDK_VERSION}"
+    implementation "software.amazon.awscdk:lambda:${CDK_VERSION}"
+    implementation "software.amazon.awscdk:apigatewayv2:${CDK_VERSION}"
     testImplementation 'junit:junit:4.12'
 }
 
@@ -39,8 +42,22 @@ compileTestKotlin {
     }
 }
 
-// TODO application
+wrapper {
+    distributionType = Wrapper.DistributionType.ALL
+}
+
+jar {
+    from {
+        configurations.runtimeClasspath
+            // Quick and dirty way to keep CDK out of the lambda uber-jar.
+            // A better solution would be to have a sub-project for CDK.
+            .filter { !it.path.contains("software.amazon.awscdk") }
+            .collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
 task cdk(type: JavaExec) {
     main = "com.github.goodwillparking.robokash.infra.AppKt"
     classpath = sourceSets.main.runtimeClasspath
+    dependsOn(jar) // Jar must exist for cdk deploy
 }
