@@ -1,7 +1,6 @@
 package com.github.goodwillparking.robokash.slack.event
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 
 @JsonTypeInfo(
@@ -12,18 +11,13 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
     visible = true
 )
 @JsonSubTypes(
-    Type(AppMention::class, name = "app_mention"),
-    Type(Message::class, name = "message")
+    JsonSubTypes.Type(EventWrapper::class, name = "event_callback"),
+    JsonSubTypes.Type(UrlVerification::class, name = "url_verification")
 )
 sealed class Event
 
-interface ChatMessage {
-    val text: String
-}
+data class EventWrapper(val event: InnerEvent, val event_id: String) : Event()
 
-data class AppMention(override val text: String) : Event(), ChatMessage
-
-data class Message(override val text: String) : Event(), ChatMessage
+data class UrlVerification(val challenge: String) : Event()
 
 data class Unknown(val type: String) : Event()
-

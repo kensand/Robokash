@@ -8,6 +8,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.github.goodwillparking.robokash.slack.event.EventSerializer
+import com.github.goodwillparking.robokash.slack.event.EventWrapper
+import com.github.goodwillparking.robokash.slack.event.Unknown
+import com.github.goodwillparking.robokash.slack.event.UrlVerification
 import java.io.DataOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -32,7 +36,7 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
 
         log.log("INPUT: $input")
 
-        verify(input, log)?.also { return it }
+        verifyCaller(input, log)?.also { return it }
 
         if ("X-Slack-Retry-Num" in input.headers) {
             // Slack will retry up to 3 times (4 total attempts).
@@ -48,21 +52,18 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
                 .withStatusCode(200)
         }
 
-        val root = objectMapper.readTree(input.body)
-
-        if (root["type"]?.textValue() == "url_verification") {
-            log.log("URL verification request")
-            return APIGatewayProxyResponseEvent()
-                .withStatusCode(200)
-                .withBody(root["challenge"]?.textValue())
+        return when (val event = EventSerializer.deserialize(input.body)) {
+            is EventWrapper -> {
+                // TODO: respond
+                log.log("Got inner event: ${event.event}")
+                APIGatewayProxyResponseEvent().withStatusCode(200)
+            }
+            is UrlVerification -> createUrlVerification(event, log)
+            is Unknown -> throw IllegalArgumentException("Received unknown event: $event")
         }
-
-        respond(root, log)
-
-        return APIGatewayProxyResponseEvent().withStatusCode(200)
     }
 
-    private fun verify(input: APIGatewayProxyRequestEvent, log: LambdaLogger): APIGatewayProxyResponseEvent? {
+    private fun verifyCaller(input: APIGatewayProxyRequestEvent, log: LambdaLogger): APIGatewayProxyResponseEvent? {
         val timestamp = requireNotNull(input.headers["X-Slack-Request-Timestamp"]) { "Missing timestamp header" }
         val requestSig = requireNotNull(input.headers["X-Slack-Signature"]) { "Missing signature header" }
         
@@ -82,11 +83,18 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
         } else null
     }
 
+    private fun createUrlVerification(verification: UrlVerification, log: LambdaLogger): APIGatewayProxyResponseEvent {
+        log.log("URL verification request")
+        return APIGatewayProxyResponseEvent()
+            .withStatusCode(200)
+            .withBody(verification.challenge)
+    }
+
     private fun respond(request: JsonNode, log: LambdaLogger) {
         var connection: HttpURLConnection? = null
 
         try {
-            //Create connection
+            // https://api.slack.com/methods/chat.postMessage
             val url = URL("https://slack.com/api/chat.postMessage")
             connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "POST"
@@ -97,12 +105,12 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
 
             val channel = request["event"]["channel"].textValue()
 
-            //Send request
+            // Send request
             DataOutputStream(connection.outputStream).use {
                 it.writeBytes(objectMapper.writeValueAsString(PostMessage(channel, "Dude!")))
             }
 
-            //Get Response
+            // Get Response
             val r = connection.inputStream.use { stream ->
                 InputStreamReader(stream).useLines { it.joinToString(System.lineSeparator()) }
             }
