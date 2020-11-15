@@ -1,4 +1,4 @@
-package com.github.goodwillparking.robokash
+package com.github.goodwillparking.robokash.slack
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
@@ -8,8 +8,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.github.goodwillparking.robokash.slack.Auth
-import com.github.goodwillparking.robokash.slack.PostMessage
 import java.io.DataOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -18,7 +16,7 @@ import java.net.URL
 /**
  * Handler for requests to Lambda function.
  */
-class App : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     companion object {
         // It is always v0

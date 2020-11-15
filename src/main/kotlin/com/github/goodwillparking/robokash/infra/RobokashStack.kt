@@ -1,6 +1,6 @@
 package com.github.goodwillparking.robokash.infra
 
-import com.github.goodwillparking.robokash.App
+import com.github.goodwillparking.robokash.slack.SlackEventHandler
 import software.amazon.awscdk.core.Construct
 import software.amazon.awscdk.core.Duration
 import software.amazon.awscdk.core.Stack
@@ -22,7 +22,7 @@ class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
         this,
         "SlackEventHandler",
         FunctionProps.builder()
-            .handler("${App::class.java.name}::handleRequest")
+            .handler("${SlackEventHandler::class.java.name}::handleRequest")
             .code(Code.fromAsset("./build/libs/Robokash.jar"))
             .runtime(Runtime.JAVA_11)
             .memorySize(512)
