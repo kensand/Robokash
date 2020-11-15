@@ -27,6 +27,7 @@ class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
             .runtime(Runtime.JAVA_11)
             .memorySize(512)
             .timeout(Duration.seconds(30))
+            .retryAttempts(0)
             .environment(
                 mapOf(
                     "BOT_ACCESS_TOKEN" to "{{resolve:ssm:robokash-dev-token:1}}",
