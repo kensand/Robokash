@@ -1,0 +1,47 @@
+{
+  "token": "fooToken",
+  "team_id": "fooTeam",
+  "api_app_id": "fooApp",
+  "event": {
+    "client_msg_id": "72868aa0-659e-4916-969d-561b768dd5c8",
+    "type": "message",
+    "text": "asdf",
+    "user": "fooUser",
+    "ts": "1605400518.001100",
+    "team": "fooTeam",
+    "blocks": [
+      {
+        "type": "rich_text",
+        "block_id": "GWNW",
+        "elements": [
+          {
+            "type": "rich_text_section",
+            "elements": [
+              {
+                "type": "text",
+                "text": "asdf"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "channel": "fooChannel",
+    "event_ts": "1605400518.001100",
+    "channel_type": "channel"
+  },
+  "type": "event_callback",
+  "event_id": "fooEvent",
+  "event_time": 1605400518,
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "team_id": "fooTeam",
+      "user_id": "fooUser",
+      "is_bot": true,
+      "is_enterprise_install": false
+    }
+  ],
+  "is_ext_shared_channel": false,
+  "event_context": "fooContext"
+}

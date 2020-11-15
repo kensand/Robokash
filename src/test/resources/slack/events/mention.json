@@ -1,0 +1,52 @@
+{
+  "token": "fooToken",
+  "team_id": "fooTeam",
+  "api_app_id": "fooApp",
+  "event": {
+    "client_msg_id": "3f0025c5-ed92-4b3a-88d4-7f2b266a7f91",
+    "type": "app_mention",
+    "text": "<@fooUser> foo",
+    "user": "fooUser",
+    "ts": "1602650239.000500",
+    "team": "fooTeam",
+    "blocks": [
+      {
+        "type": "rich_text",
+        "block_id": "FuVX",
+        "elements": [
+          {
+            "type": "rich_text_section",
+            "elements": [
+              {
+                "type": "user",
+                "user_id": "fooUser"
+              },
+              {
+                "type": "text",
+                "text": " foo"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "channel": "fooChannel",
+    "event_ts": "1602650239.000500"
+  },
+  "type": "event_callback",
+  "event_id": "fooEvent",
+  "event_time": 1602650239,
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "team_id": "fooTeam",
+      "user_id": "fooUser",
+      "is_bot": true,
+      "is_enterprise_install": false
+    }
+  ],
+  "is_ext_shared_channel": false,
+  "event_context": "fooContext"
+}
+
+
