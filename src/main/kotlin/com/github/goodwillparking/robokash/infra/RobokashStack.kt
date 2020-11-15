@@ -30,8 +30,8 @@ class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
             .retryAttempts(0)
             .environment(
                 mapOf(
-                    "BOT_ACCESS_TOKEN" to "{{resolve:ssm:robokash-dev-token:1}}",
-                    "BOT_SIGNING_SECRET" to "{{resolve:ssm:robokash-dev-signing-secret:1}}",
+                    "BOT_ACCESS_TOKEN" to "{{resolve:ssm:$id-token:1}}",
+                    "BOT_SIGNING_SECRET" to "{{resolve:ssm:$id-signing-secret:1}}",
                     // TODO: user id
                 )
             )
