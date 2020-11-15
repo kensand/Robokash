@@ -18,43 +18,47 @@ import software.amazon.awscdk.services.apigatewayv2.PayloadFormatVersion
 
 class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
 
-    init {
-        val mentionFunction = Function(
-            this,
-            "MentionFunction",
-            FunctionProps.builder()
-                .handler("${App::class.java.name}::handleRequest")
-                .code(Code.fromAsset("./build/libs/Robokash.jar"))
-                .runtime(Runtime.JAVA_11)
-                .memorySize(512)
-                .timeout(Duration.seconds(30))
-                .environment(
-                    mapOf(
-                        "BOT_ACCESS_TOKEN" to "{{resolve:ssm:robokash-dev-token:1}}",
-                        "BOT_SIGNING_SECRET" to "{{resolve:ssm:robokash-dev-signing-secret:1}}",
-                    )
+    val slackEventHandler = Function(
+        this,
+        "SlackEventHandler",
+        FunctionProps.builder()
+            .handler("${App::class.java.name}::handleRequest")
+            .code(Code.fromAsset("./build/libs/Robokash.jar"))
+            .runtime(Runtime.JAVA_11)
+            .memorySize(512)
+            .timeout(Duration.seconds(30))
+            .environment(
+                mapOf(
+                    "BOT_ACCESS_TOKEN" to "{{resolve:ssm:robokash-dev-token:1}}",
+                    "BOT_SIGNING_SECRET" to "{{resolve:ssm:robokash-dev-signing-secret:1}}",
+                    // TODO: user id
                 )
+            )
+            .build()
+    )
+
+    val lambdaIntegration = LambdaProxyIntegration(
+        LambdaProxyIntegrationProps.builder()
+            .handler(slackEventHandler)
+            // VERSION_1_0 maintains the original case of HTTP headers.
+            .payloadFormatVersion(PayloadFormatVersion.VERSION_1_0)
+            .build()
+    )
+
+    val slackEventApi = HttpApi(
+        this,
+        "SlackEventApi",
+        HttpApiProps.builder()
+            .description("$id API invoked for all slack events. https://api.slack.com/events-api")
+            .build()
+    ).apply {
+        addRoutes(
+            AddRoutesOptions.builder()
+                .integration(lambdaIntegration)
+                .methods(listOf(HttpMethod.POST))
+                .path("/robokash/slack/event")
                 .build()
         )
-
-        val mentionIntegration = LambdaProxyIntegration(
-            LambdaProxyIntegrationProps.builder()
-                .handler(mentionFunction)
-                // VERSION_1_0 maintains the original case of HTTP headers.
-                .payloadFormatVersion(PayloadFormatVersion.VERSION_1_0)
-                .build()
-        )
-
-        val mentionApi = HttpApi(
-            this,
-            "MentionApi",
-            HttpApiProps.builder().description("$id api invoked when the bot is mentioned (@bot-name)").build()
-        )
-
-        mentionApi.addRoutes(AddRoutesOptions.builder()
-            .integration(mentionIntegration)
-            .methods(listOf(HttpMethod.POST))
-            .path("/robokash/mention")
-            .build())
     }
+
 }

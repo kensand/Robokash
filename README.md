@@ -9,4 +9,5 @@
 * Use message sender as keyword
 * Allow distinction between exact keyword match and partial match
 * Scale probabilities with number of source messages that match keyword
+* delayed responses? Don't want to sleep, maybe slack API supports this.
 
