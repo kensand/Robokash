@@ -5,16 +5,16 @@ import software.amazon.awscdk.core.Construct
 import software.amazon.awscdk.core.Duration
 import software.amazon.awscdk.core.Stack
 import software.amazon.awscdk.services.apigatewayv2.AddRoutesOptions
-import software.amazon.awscdk.services.lambda.Code
-import software.amazon.awscdk.services.lambda.Function
-import software.amazon.awscdk.services.lambda.FunctionProps
-import software.amazon.awscdk.services.lambda.Runtime
 import software.amazon.awscdk.services.apigatewayv2.HttpApi
 import software.amazon.awscdk.services.apigatewayv2.HttpApiProps
 import software.amazon.awscdk.services.apigatewayv2.HttpMethod
 import software.amazon.awscdk.services.apigatewayv2.LambdaProxyIntegration
 import software.amazon.awscdk.services.apigatewayv2.LambdaProxyIntegrationProps
 import software.amazon.awscdk.services.apigatewayv2.PayloadFormatVersion
+import software.amazon.awscdk.services.lambda.Code
+import software.amazon.awscdk.services.lambda.Function
+import software.amazon.awscdk.services.lambda.FunctionProps
+import software.amazon.awscdk.services.lambda.Runtime
 
 class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
 
@@ -32,7 +32,7 @@ class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
                 mapOf(
                     "BOT_ACCESS_TOKEN" to "{{resolve:ssm:$id-token:1}}",
                     "BOT_SIGNING_SECRET" to "{{resolve:ssm:$id-signing-secret:1}}",
-                    // TODO: user id
+                    "BOT_USER_ID" to "{{resolve:ssm:$id-user-id:1}}",
                 )
             )
             .build()

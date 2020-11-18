@@ -4,13 +4,15 @@ import io.kotest.assertions.asClue
 import io.kotest.core.datatest.forAll
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.beInstanceOf
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlin.reflect.KClass
 
 internal class EventSerializationTest : FreeSpec({
 
     "events should deserialize" - {
-        forAll<EventSetup>(
+        forAll<EventSetup<*>>(
             "url-verification" to { EventSetup(it, UrlVerification::class) },
             "wrapper" to EventSetup("message", EventWrapper::class),
             "unknown" to EventSetup("app-requested", Unknown::class)
@@ -18,21 +20,33 @@ internal class EventSerializationTest : FreeSpec({
     }
 
     "inner events should deserialize" - {
-        forAll<EventSetup>(
-            "mention" to { EventSetup(it, AppMention::class) },
-            "message" to { EventSetup(it, Message::class) },
-            "unknown inner" to EventSetup("reaction-added", UnknownInner::class)
-        ) { (fileName, innerType) ->
-            deserializeFromFile<EventWrapper>(fileName) { deserialized ->
-                deserialized.event should beInstanceOf(innerType)
+        "ChatMessage" - {
+            "mention" {
+                deserializeFromFile<EventWrapper>("mention") { deserialized ->
+                    deserialized.event.apply {
+                        shouldBeInstanceOf<ChatMessage>()
+                        isMention shouldBe true
+                    }
+                }
             }
+            "message" {
+                deserializeFromFile<EventWrapper>("message") { deserialized ->
+                    deserialized.event.apply {
+                        shouldBeInstanceOf<ChatMessage>()
+                        isMention shouldBe false
+                    }
+                }
+            }
+        }
+        "unknown" {
+            deserializeFromFile<EventWrapper>("reaction-added") { it.event.shouldBeInstanceOf<UnknownInner>() }
         }
     }
 })
 
 private infix fun <A, B> A.to(mapper: (A) -> B): Pair<A, B> = Pair(this, mapper(this))
 
-private data class EventSetup(val jsonFile: String, val expectedEventType: KClass<*>)
+private data class EventSetup<T : Any>(val jsonFile: String, val expectedEventType: KClass<T>)
 
 private inline fun <reified T : Any> Any.deserializeFromFile(fileName: String, noinline block: (T) -> Unit) =
     deserializeFromFile(fileName, T::class, block)

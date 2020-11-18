@@ -5,12 +5,11 @@ import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.github.goodwillparking.robokash.slack.event.ChatMessage
 import com.github.goodwillparking.robokash.slack.event.EventSerializer
 import com.github.goodwillparking.robokash.slack.event.EventWrapper
 import com.github.goodwillparking.robokash.slack.event.Unknown
+import com.github.goodwillparking.robokash.slack.event.UnknownInner
 import com.github.goodwillparking.robokash.slack.event.UrlVerification
 import java.io.DataOutputStream
 import java.io.InputStreamReader
@@ -28,7 +27,7 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
         private const val authVersion = "v0"
     }
 
-    private val objectMapper = ObjectMapper().registerModule(KotlinModule())
+    private val botId = UserId(System.getenv("BOT_USER_ID"))
 
     override fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
 
@@ -54,9 +53,17 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
 
         return when (val event = EventSerializer.deserialize(input.body)) {
             is EventWrapper -> {
-                // TODO: respond
-                log.log("Got inner event: ${event.event}")
-                APIGatewayProxyResponseEvent().withStatusCode(200)
+                when (val inner = event.event) {
+                    is ChatMessage -> {
+                        if (inner.user == botId) {
+                            log.log("The event was triggered by the bot. Ignore it.")
+                        } else {
+                            respond(inner, log)
+                        }
+                        APIGatewayProxyResponseEvent().withStatusCode(200)
+                    }
+                    is UnknownInner -> throw IllegalArgumentException("Received event with unknown inner event: $event")
+                }
             }
             is UrlVerification -> createUrlVerification(event, log)
             is Unknown -> throw IllegalArgumentException("Received unknown event: $event")
@@ -90,7 +97,7 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
             .withBody(verification.challenge)
     }
 
-    private fun respond(request: JsonNode, log: LambdaLogger) {
+    private fun respond(message: ChatMessage, log: LambdaLogger) {
         var connection: HttpURLConnection? = null
 
         try {
@@ -103,11 +110,13 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
             connection.setRequestProperty("Authorization", "Bearer ${System.getenv("BOT_ACCESS_TOKEN")}")
             connection.doOutput = true
 
-            val channel = request["event"]["channel"].textValue()
-
             // Send request
             DataOutputStream(connection.outputStream).use {
-                it.writeBytes(objectMapper.writeValueAsString(PostMessage(channel, "Dude!")))
+                it.writeBytes(
+                    EventSerializer.objectMapper.writeValueAsString(
+                        PostMessage(message.channel.value, "Dude!")
+                    )
+                )
             }
 
             // Get Response
