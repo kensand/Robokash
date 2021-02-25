@@ -1,5 +1,6 @@
 package com.github.goodwillparking.robokash.slack.event
 
+import com.github.goodwillparking.robokash.util.IoUtil.loadTextResource
 import io.kotest.assertions.asClue
 import io.kotest.core.datatest.forAll
 import io.kotest.core.spec.style.FreeSpec
@@ -59,6 +60,3 @@ private fun <T : Any> Any.deserializeFromFile(fileName: String, type: KClass<T>,
         }
     }
 }
-
-private fun Any.loadTextResource(path: String) = this::class.java.getResource(path)?.readText()
-    ?: throw IllegalArgumentException("No resource found at path $path")

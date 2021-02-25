@@ -27,6 +27,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect:$KOTLIN_VERSION"
     implementation "com.fasterxml.jackson.core:jackson-core:$JACKSON_VERSION"
     implementation "com.fasterxml.jackson.core:jackson-databind:$JACKSON_VERSION"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$JACKSON_VERSION"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$JACKSON_VERSION"
     implementation "software.amazon.awscdk:core:$CDK_VERSION"
     implementation "software.amazon.awscdk:lambda:$CDK_VERSION"
@@ -61,12 +62,17 @@ wrapper {
 
 jar {
     from {
-        configurations.runtimeClasspath
-            // Quick and dirty way to keep CDK out of the lambda uber-jar.
-            // A better solution would be to have a sub-project for CDK.
-            .filter { !it.path.contains("software.amazon.awscdk") }
-            .collect { it.isDirectory() ? it : zipTree(it) }
+        [
+            configurations.runtimeClasspath
+                // Quick and dirty way to keep CDK out of the lambda uber-jar.
+                // A better solution would be to have a sub-project for CDK.
+                .filter { !it.path.contains("software.amazon.awscdk") }
+                .collect { it.isDirectory() ? it : zipTree(it) },
+            "$project.buildDir/responses.json"
+        ]
     }
+
+    dependsOn 'compileResponses'
 }
 
 // TODO: Don't synth again if sources didn't change.
@@ -74,4 +80,10 @@ task cdk(type: JavaExec) {
     main = "com.github.goodwillparking.robokash.infra.AppKt"
     classpath = sourceSets.main.runtimeClasspath
     dependsOn(test, jar) // Jar must exist for cdk deploy
+}
+
+task compileResponses(type: JavaExec) {
+    main = "com.github.goodwillparking.robokash.tools.ResponseExtractorKt"
+    classpath = sourceSets.test.runtimeClasspath
+    args = [project.buildDir.path]
 }

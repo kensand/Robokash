@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PRO
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.github.goodwillparking.robokash.slack.ChannelId
 import com.github.goodwillparking.robokash.slack.UserId
@@ -14,6 +15,7 @@ object EventSerializer {
     val objectMapper: ObjectMapper = ObjectMapper()
         .registerModule(KotlinModule())
         .registerModule(SlackModule)
+        .registerModule(JavaTimeModule())
         .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
     fun deserialize(json: String) = objectMapper.readValue(json, Event::class.java)

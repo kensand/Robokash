@@ -4,3 +4,4 @@
 .aws-sam
 build/
 .gradle
+raw-messages.json
