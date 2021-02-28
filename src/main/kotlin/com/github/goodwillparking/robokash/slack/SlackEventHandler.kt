@@ -5,16 +5,20 @@ import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
+import com.github.goodwillparking.robokash.Responses
+import com.github.goodwillparking.robokash.Robokash
 import com.github.goodwillparking.robokash.slack.event.ChatMessage
 import com.github.goodwillparking.robokash.slack.event.EventSerializer
 import com.github.goodwillparking.robokash.slack.event.EventWrapper
 import com.github.goodwillparking.robokash.slack.event.Unknown
 import com.github.goodwillparking.robokash.slack.event.UnknownInner
 import com.github.goodwillparking.robokash.slack.event.UrlVerification
+import com.github.goodwillparking.robokash.util.ResourceUtil
 import java.io.DataOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.random.Random
 
 /**
  * Handler for requests to Lambda function.
@@ -28,6 +32,13 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
     }
 
     private val botId = UserId(System.getenv("BOT_USER_ID"))
+
+    private val responseProbability = System.getenv("RESPONSE_CHANCE").toDouble()
+
+    private val responses: Responses by lazy {
+        val text = ResourceUtil.loadTextResource("/responses.json")
+        EventSerializer.objectMapper.readValue(text, Responses::class.java)
+    }
 
     override fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
 
@@ -58,7 +69,7 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
                         if (inner.user == botId) {
                             log.log("The event was triggered by the bot. Ignore it.")
                         } else {
-                            respond(inner, log)
+                            determineResponse(log)?.also { respond(it, inner, log) }
                         }
                         APIGatewayProxyResponseEvent().withStatusCode(200)
                     }
@@ -97,7 +108,16 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
             .withBody(verification.challenge)
     }
 
-    private fun respond(message: ChatMessage, log: LambdaLogger) {
+    private fun determineResponse(log: LambdaLogger): String? = when {
+        responses.values.isEmpty() -> {
+            log.log("No responses defined.")
+            null
+        }
+        Robokash.role(Random.Default, responseProbability) -> responses.values.random()
+        else -> null
+    }
+
+    private fun respond(response: String, message: ChatMessage, log: LambdaLogger) {
         var connection: HttpURLConnection? = null
 
         try {
@@ -114,7 +134,7 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
             DataOutputStream(connection.outputStream).use {
                 it.writeBytes(
                     EventSerializer.objectMapper.writeValueAsString(
-                        PostMessage(message.channel.value, "Dude!")
+                        PostMessage(message.channel.value, response)
                     )
                 )
             }

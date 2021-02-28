@@ -28,11 +28,13 @@ class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
             .memorySize(512)
             .timeout(Duration.seconds(30))
             .retryAttempts(0)
+            .reservedConcurrentExecutions(2)
             .environment(
                 mapOf(
                     "BOT_ACCESS_TOKEN" to "{{resolve:ssm:$id-token:1}}",
                     "BOT_SIGNING_SECRET" to "{{resolve:ssm:$id-signing-secret:1}}",
                     "BOT_USER_ID" to "{{resolve:ssm:$id-user-id:1}}",
+                    "RESPONSE_CHANCE" to 1.0.toString()
                 )
             )
             .build()

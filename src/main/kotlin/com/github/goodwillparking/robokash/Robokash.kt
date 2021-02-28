@@ -13,6 +13,15 @@ data class Robokash(
     val config: Config = Config()
 ) {
 
+    companion object {
+        // TODO: RoleResult(val required: Double, val actual: Double, val isSuccess: Boolean)
+        fun role(random: Random, probability: Double): Boolean =
+            when (probability) {
+                0.0 -> false // Check for 0 in case the Random rolls a 1.0 exactly.
+                else -> random.nextDouble(0.0, 1.0) + probability >= 1.0
+            }
+    }
+
     fun decideResponse(random: Random = Random.Default): String? {
         return rolls.asSequence()
             .map {
@@ -31,12 +40,6 @@ data class Robokash(
     fun decideResponse(random: Random, role: KeywordRoll): String? {
         return TODO()
     }
-
-    fun role(random: Random, probability: Double): Boolean =
-        when (probability) {
-            0.0 -> false // Check for 0 in case the Random rolls a 1.0 exactly.
-            else -> random.nextDouble(0.0, 1.0) + probability >= 1.0
-        }
 
     data class Config(
         val rollMultiplier: Int = 1,

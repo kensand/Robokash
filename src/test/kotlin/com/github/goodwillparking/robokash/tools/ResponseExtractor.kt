@@ -1,8 +1,9 @@
 package com.github.goodwillparking.robokash.tools
 
 import com.fasterxml.jackson.core.type.TypeReference
+import com.github.goodwillparking.robokash.Responses
 import com.github.goodwillparking.robokash.slack.event.EventSerializer.objectMapper
-import com.github.goodwillparking.robokash.util.IoUtil
+import com.github.goodwillparking.robokash.util.ResourceUtil
 import java.io.File
 import java.time.Instant
 
@@ -15,7 +16,7 @@ private val timestampRegex = Regex("\\[.*\\d:\\d\\d.*]")
 fun main(vararg args: String) {
     val outputDir = args[0]
 
-    val json = IoUtil.loadTextResource("/raw-messages.json")
+    val json = ResourceUtil.loadTextResource("/raw-messages.json")
     val messages = objectMapper.readValue(json, object : TypeReference<List<LoggedMessage>>() {})
     val responses = Responses(messages.map {
         it.msg.replace(leadingQuoteRegex, "")
@@ -29,7 +30,5 @@ fun main(vararg args: String) {
     val responsesJson = objectMapper.writeValueAsString(responses)
     File("$outputDir/responses.json").writeText(responsesJson)
 }
-
-data class Responses(val values: List<String>)
 
 private data class LoggedMessage(val ts: Instant, val msg: String)

@@ -1,6 +1,6 @@
 package com.github.goodwillparking.robokash.slack.event
 
-import com.github.goodwillparking.robokash.util.IoUtil.loadTextResource
+import com.github.goodwillparking.robokash.util.ResourceUtil.loadTextResource
 import io.kotest.assertions.asClue
 import io.kotest.core.datatest.forAll
 import io.kotest.core.spec.style.FreeSpec

@@ -72,7 +72,7 @@ jar {
         ]
     }
 
-    dependsOn 'compileResponses'
+    dependsOn 'compileResponses', 'test'
 }
 
 // TODO: Don't synth again if sources didn't change.
@@ -87,3 +87,5 @@ task compileResponses(type: JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     args = [project.buildDir.path]
 }
+
+defaultTasks 'build'
