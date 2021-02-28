@@ -69,7 +69,7 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
                         if (inner.user == botId) {
                             log.log("The event was triggered by the bot. Ignore it.")
                         } else {
-                            determineResponse(log)?.also { respond(it, inner, log) }
+                            determineResponse(inner, log)?.also { respond(it, inner, log) }
                         }
                         APIGatewayProxyResponseEvent().withStatusCode(200)
                     }
@@ -108,12 +108,13 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
             .withBody(verification.challenge)
     }
 
-    private fun determineResponse(log: LambdaLogger): String? = when {
+    private fun determineResponse(chatMessage: ChatMessage, log: LambdaLogger): String? = when {
         responses.values.isEmpty() -> {
             log.log("No responses defined.")
             null
         }
-        Robokash.role(Random.Default, responseProbability) -> responses.values.random()
+        chatMessage.isMention ||
+            Robokash.role(Random.Default, responseProbability) -> responses.values.random()
         else -> null
     }
 
