@@ -6,7 +6,6 @@ import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.github.goodwillparking.robokash.Responses
-import com.github.goodwillparking.robokash.Robokash
 import com.github.goodwillparking.robokash.slack.event.ChatMessage
 import com.github.goodwillparking.robokash.slack.event.EventSerializer
 import com.github.goodwillparking.robokash.slack.event.EventWrapper
@@ -113,10 +112,16 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
             log.log("No responses defined.")
             null
         }
-        chatMessage.isMention ||
-            Robokash.role(Random.Default, responseProbability) -> responses.values.random()
+        chatMessage.isMention || role(Random.Default, responseProbability) -> responses.values.random()
         else -> null
     }
+
+    // TODO: RoleResult(val required: Double, val actual: Double, val isSuccess: Boolean)
+    private fun role(random: Random, probability: Double): Boolean =
+        when (probability) {
+            0.0 -> false // Check for 0 in case the Random rolls a 1.0 exactly.
+            else -> random.nextDouble(0.0, 1.0) + probability >= 1.0
+        }
 
     private fun respond(response: String, message: ChatMessage, log: LambdaLogger) {
         var connection: HttpURLConnection? = null

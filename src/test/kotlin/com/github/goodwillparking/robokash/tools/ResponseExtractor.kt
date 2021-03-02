@@ -9,9 +9,8 @@ import java.time.Instant
 
 private val leadingQuoteRegex = Regex("^&gt;\\s*")
 private val newlineQuoteRegex = Regex("\\n&gt;\\s*")
-//private val chatQuoteRegex = Regex("\\[.*?].*?:\\s+") // Matches things like "[2/1/19, 4:25:28 PM] Jane Doe: "
 private val timestampRegex = Regex("\\[.*\\d:\\d\\d.*]")
-// TODO: add blacklist to exclude specific messages, eg: "yikes", "Andrey:", "Q:", "Akash:"
+// TODO: add blacklist to exclude specific messages, e.g. "Andrey:", "Q:", "Akash:"
 
 fun main(vararg args: String) {
     val outputDir = args[0]
@@ -21,9 +20,7 @@ fun main(vararg args: String) {
     val responses = Responses(messages.map {
         it.msg.replace(leadingQuoteRegex, "")
             .replace(newlineQuoteRegex, "\n")
-//            .replace(chatQuoteRegex, "")
     }.filter { !it.contains(timestampRegex) })
-//    println(responses.values.map { "\n\n$it" })
 
     println("${messages.size} source messages, ${responses.values.size} responses")
 

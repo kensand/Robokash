@@ -52,7 +52,7 @@ private data class EventSetup<T : Any>(val jsonFile: String, val expectedEventTy
 private inline fun <reified T : Any> Any.deserializeFromFile(fileName: String, noinline block: (T) -> Unit) =
     deserializeFromFile(fileName, T::class, block)
 
-private fun <T : Any> Any.deserializeFromFile(fileName: String, type: KClass<T>, block: (T) -> Unit = { }) {
+private fun <T : Any> deserializeFromFile(fileName: String, type: KClass<T>, block: (T) -> Unit = { }) {
     loadTextResource("/slack/events/$fileName.json").asClue { json ->
         EventSerializer.deserialize(json).asClue { deserialized ->
             deserialized should beInstanceOf(type)
