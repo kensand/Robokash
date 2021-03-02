@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.github.goodwillparking.robokash.slack.ChannelId
 import com.github.goodwillparking.robokash.slack.UserId
 
+// TODO: don't respond to these events as it can result in double responses
 private const val MENTION_TYPE = "app_mention"
 
 @JsonTypeInfo(
