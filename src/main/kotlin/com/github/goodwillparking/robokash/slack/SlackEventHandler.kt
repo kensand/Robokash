@@ -22,22 +22,28 @@ import kotlin.random.Random
 /**
  * Handler for requests to Lambda function.
  */
-class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+class SlackEventHandler(
+    val random: Random = Random.Default,
+    val slackInterface: SlackInterface = LiveSlackInterface(),
+    responseProvider: () -> Responses = DEFAULT_RESPONSE_PROVIDER
+) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     companion object {
         // It is always v0
         // https://api.slack.com/authentication/verifying-requests-from-slack#verifying-requests-from-slack-using-signing-secrets__a-recipe-for-security__how-to-make-a-request-signature-in-4-easy-steps-an-overview
-        private const val authVersion = "v0"
+        private const val AUTH_VERSION = "v0"
+
+        private val DEFAULT_RESPONSE_PROVIDER: () -> Responses = {
+            val text = ResourceUtil.loadTextResource("/responses.json")
+            EventSerializer.objectMapper.readValue(text, Responses::class.java)
+        }
     }
 
     private val botId = UserId(System.getenv("BOT_USER_ID"))
 
     private val responseProbability = System.getenv("RESPONSE_CHANCE").toDouble()
 
-    private val responses: Responses by lazy {
-        val text = ResourceUtil.loadTextResource("/responses.json")
-        EventSerializer.objectMapper.readValue(text, Responses::class.java)
-    }
+    private val responses: Responses by lazy(responseProvider)
 
     override fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
 
@@ -88,7 +94,7 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
             key = System.getenv("BOT_SIGNING_SECRET"),
             body = input.body,
             timestamp = timestamp,
-            version = authVersion
+            version = AUTH_VERSION
         )
 
         return if (!requestSig.equals(sig, ignoreCase = true)) {
@@ -112,7 +118,7 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
             log.log("No responses defined.")
             null
         }
-        chatMessage.isMention || role(Random.Default, responseProbability) -> responses.values.random()
+        chatMessage.isMention || role(random, responseProbability) -> responses.values.random()
         else -> null
     }
 
@@ -124,34 +130,7 @@ class SlackEventHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGateway
         }
 
     private fun respond(response: String, message: ChatMessage, log: LambdaLogger) {
-        var connection: HttpURLConnection? = null
-
-        try {
-            // https://api.slack.com/methods/chat.postMessage
-            val url = URL("https://slack.com/api/chat.postMessage")
-            connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "POST"
-            // https://api.slack.com/web#slack-web-api__basics__post-bodies__json-encoded-bodies
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.setRequestProperty("Authorization", "Bearer ${System.getenv("BOT_ACCESS_TOKEN")}")
-            connection.doOutput = true
-
-            // Send request
-            DataOutputStream(connection.outputStream).use {
-                it.writeBytes(
-                    EventSerializer.objectMapper.writeValueAsString(
-                        PostMessage(message.channel.value, response)
-                    )
-                )
-            }
-
-            // Get Response
-            val r = connection.inputStream.use { stream ->
-                InputStreamReader(stream).useLines { it.joinToString(System.lineSeparator()) }
-            }
-            log.log("POST response: $r")
-        } finally {
-            connection?.disconnect()
-        }
+        val result = slackInterface.postMessage(response, message.channel).getOrThrow()
+        log.log("Post message result: $result")
     }
 }

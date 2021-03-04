@@ -10,4 +10,5 @@
 * Scale probabilities with number of source messages that match keyword
 * Decent logging
 * Tests
+* Put secrets in KMS
 
