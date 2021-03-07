@@ -6,12 +6,14 @@ import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.NO_
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.RETRY_COUNT_HEADER
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.SIGNATURE_HEADER
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.TIMESTAMP_HEADER
-import com.github.goodwillparking.robokash.util.Try.Success
 import com.github.goodwillparking.robokash.slack.event.ChatMessage
-import com.github.goodwillparking.robokash.util.DefaultSerializer.serialize
 import com.github.goodwillparking.robokash.slack.event.Event
 import com.github.goodwillparking.robokash.slack.event.EventWrapper
 import com.github.goodwillparking.robokash.slack.event.UrlVerification
+import com.github.goodwillparking.robokash.util.DefaultSerializer.serialize
+import com.github.goodwillparking.robokash.util.ResourceUtil.loadTextResource
+import com.github.goodwillparking.robokash.util.Try.Success
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -111,6 +113,24 @@ internal class SlackEventHandlerTest : FreeSpec({
             )
         }
     }
+
+    "bot should throw" - {
+        "on unknown events" {
+            with(testHandler()) {
+                shouldThrow<IllegalArgumentException> {
+                    handle(createRequest(loadTextResource("/slack/events/app-requested.json")))
+                }
+            }
+        }
+
+        "on unknown inner events" {
+            with(testHandler()) {
+                shouldThrow<IllegalArgumentException> {
+                    handle(createRequest(loadTextResource("/slack/events/reaction-added.json")))
+                }
+            }
+        }
+    }
 })
 
 private val channelId = ChannelId("channel")
@@ -163,8 +183,12 @@ private fun SlackEventHandler.verifySuccessfulPost(channel: ChannelId = channelI
 private fun SlackEventHandler.createRequest(
     event: Event,
     overrideSignature: String? = null
+) = createRequest(serialize(event), overrideSignature)
+
+private fun SlackEventHandler.createRequest(
+    body: String,
+    overrideSignature: String? = null
 ): APIGatewayProxyRequestEvent {
-    val body = serialize(event)
     val requestTime = Instant.now()
 
     val signature = overrideSignature ?: Auth.produceSignature(

@@ -8,7 +8,5 @@
 * Use message sender as keyword
 * Allow distinction between exact keyword match and partial match
 * Scale probabilities with number of source messages that match keyword
-* Decent logging
-* Tests
 * Put secrets in KMS
 
