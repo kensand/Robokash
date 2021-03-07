@@ -20,9 +20,14 @@ import kotlin.random.Random
  * Handler for requests to Lambda function.
  */
 class SlackEventHandler(
+    val props: BotInstanceProperties = BotInstanceProperties(
+        botAccessToken = System.getenv("BOT_ACCESS_TOKEN"),
+        botSigningSecret = System.getenv("BOT_SIGNING_SECRET"),
+        botUserId = UserId(System.getenv("BOT_USER_ID"))
+    ),
     val random: Random = Random.Default,
     val slackInterface: SlackInterface = LiveSlackInterface(
-        botAccessToken = System.getenv("BOT_ACCESS_TOKEN")
+        botAccessToken = props.botAccessToken
     ),
     responseProvider: () -> Responses = DEFAULT_RESPONSE_PROVIDER
 ) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -37,8 +42,6 @@ class SlackEventHandler(
             DefaultSerializer.objectMapper.readValue(text, Responses::class.java)
         }
     }
-
-    private val botId = UserId(System.getenv("BOT_USER_ID"))
 
     private val responseProbability = System.getenv("RESPONSE_CHANCE").toDouble()
 
@@ -70,7 +73,7 @@ class SlackEventHandler(
             is EventWrapper -> {
                 when (val inner = event.event) {
                     is ChatMessage -> {
-                        if (inner.user == botId) {
+                        if (inner.user == props.botUserId) {
                             log.log("The event was triggered by the bot. Ignore it.")
                         } else {
                             determineResponse(inner, log)?.also { respond(it, inner, log) }
@@ -90,7 +93,7 @@ class SlackEventHandler(
         val requestSig = requireNotNull(input.headers["X-Slack-Signature"]) { "Missing signature header" }
         
         val sig = Auth.produceSignature(
-            key = System.getenv("BOT_SIGNING_SECRET"),
+            key = props.botSigningSecret,
             body = input.body,
             timestamp = timestamp,
             version = AUTH_VERSION
