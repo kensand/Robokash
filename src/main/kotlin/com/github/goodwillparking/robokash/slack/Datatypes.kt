@@ -1,5 +1,8 @@
 package com.github.goodwillparking.robokash.slack
 
+import com.github.goodwillparking.robokash.slack.event.Unknown
+import com.github.goodwillparking.robokash.slack.event.UnknownInner
+
 abstract class BoxedValue<V>(val value: V) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -26,6 +29,13 @@ class ChannelId(value: String) : BoxedString(value)
 data class PostMessage(val channel: ChannelId, val text: String)
 
 data class BotInstanceProperties(val accessToken: String, val signingSecret: String, val userId: UserId)
+
 data class Responses(val values: List<String>) {
     constructor(response: String): this(listOf(response))
 }
+
+data class UnknownSlackEventException(val unknown: Unknown) :
+    IllegalArgumentException("Unknown event type ${unknown.type}")
+
+data class UnknownSlackInnerEventException(val unknown: UnknownInner) :
+    IllegalArgumentException("Unknown inner event type ${unknown.type}")

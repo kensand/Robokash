@@ -27,6 +27,7 @@ internal class SlackEventHandlerTest : FreeSpec({
         "when it is mentioned" {
             with(testHandler()) {
                 expectSuccessfulPost()
+                expectRoll()
 
                 handle(createRequest(chatMessageMention))
                 verifySuccessfulPost()
@@ -117,7 +118,7 @@ internal class SlackEventHandlerTest : FreeSpec({
     "bot should throw" - {
         "on unknown events" {
             with(testHandler()) {
-                shouldThrow<IllegalArgumentException> {
+                shouldThrow<UnknownSlackEventException> {
                     handle(createRequest(loadTextResource("/slack/events/app-requested.json")))
                 }
             }
@@ -125,7 +126,7 @@ internal class SlackEventHandlerTest : FreeSpec({
 
         "on unknown inner events" {
             with(testHandler()) {
-                shouldThrow<IllegalArgumentException> {
+                shouldThrow<UnknownSlackInnerEventException> {
                     handle(createRequest(loadTextResource("/slack/events/reaction-added.json")))
                 }
             }
@@ -166,7 +167,7 @@ private fun SlackEventHandler.handle(
     body shouldBe expectedBody
 }
 
-private fun SlackEventHandler.expectRoll(result: Double) {
+private fun SlackEventHandler.expectRoll(result: Double = 0.0) {
     require(result >= 0)
     require(result <= 1.0)
     every { random.nextDouble(0.0, 1.0) } returns result
