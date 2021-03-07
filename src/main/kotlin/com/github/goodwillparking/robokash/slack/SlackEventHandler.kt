@@ -1,7 +1,6 @@
 package com.github.goodwillparking.robokash.slack
 
 import com.amazonaws.services.lambda.runtime.Context
-import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
@@ -14,7 +13,14 @@ import com.github.goodwillparking.robokash.slack.event.Unknown
 import com.github.goodwillparking.robokash.slack.event.UnknownInner
 import com.github.goodwillparking.robokash.slack.event.UrlVerification
 import com.github.goodwillparking.robokash.util.ResourceUtil
+import mu.KotlinLogging
 import kotlin.random.Random
+
+private val log = KotlinLogging.logger { }
+
+fun main() {
+    log.debug { "test" }
+}
 
 /**
  * Handler for requests to Lambda function.
@@ -49,11 +55,9 @@ class SlackEventHandler(
 
     override fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
 
-        val log = context.logger
+        log.debug { "INPUT: $input" }
 
-        log.log("INPUT: $input")
-
-        verifyCaller(input, log)?.also { return it }
+        verifyCaller(input)?.also { return it }
 
         if ("X-Slack-Retry-Num" in input.headers) {
             // Slack will retry up to 3 times (4 total attempts).
@@ -61,7 +65,7 @@ class SlackEventHandler(
             // Ignore the retries because Robokash probably got the initial request
             // and is just taking his sweet time to respond.
             // https://api.slack.com/events-api#the-events-api__field-guide__error-handling__graceful-retries
-            log.log("This is a retry from Slack, ignore it.")
+            log.info { "This is a retry from Slack, ignore it." }
             return APIGatewayProxyResponseEvent()
                 // Ask Slack to pls stahp
                 // https://api.slack.com/events-api#the-events-api__field-guide__error-handling__graceful-retries__turning-retries-off
@@ -74,21 +78,21 @@ class SlackEventHandler(
                 when (val inner = event.event) {
                     is ChatMessage -> {
                         if (inner.user == props.botUserId) {
-                            log.log("The event was triggered by the bot. Ignore it.")
+                            log.info { "The event was triggered by the bot. Ignore it." }
                         } else {
-                            determineResponse(inner, log)?.also { respond(it, inner, log) }
+                            determineResponse(inner)?.also { respond(it, inner) }
                         }
                         APIGatewayProxyResponseEvent().withStatusCode(200)
                     }
                     is UnknownInner -> throw IllegalArgumentException("Received event with unknown inner event: $event")
                 }
             }
-            is UrlVerification -> createUrlVerification(event, log)
+            is UrlVerification -> createUrlVerification(event)
             is Unknown -> throw IllegalArgumentException("Received unknown event: $event")
         }
     }
 
-    private fun verifyCaller(input: APIGatewayProxyRequestEvent, log: LambdaLogger): APIGatewayProxyResponseEvent? {
+    private fun verifyCaller(input: APIGatewayProxyRequestEvent): APIGatewayProxyResponseEvent? {
         val timestamp = requireNotNull(input.headers["X-Slack-Request-Timestamp"]) { "Missing timestamp header" }
         val requestSig = requireNotNull(input.headers["X-Slack-Signature"]) { "Missing signature header" }
         
@@ -100,7 +104,7 @@ class SlackEventHandler(
         )
 
         return if (!requestSig.equals(sig, ignoreCase = true)) {
-            log.log("Unauthorized request: $sig")
+            log.warn { "Unauthorized request: $sig" }
             APIGatewayProxyResponseEvent()
                 // In case this really was Slack and we've got a bug in our auth code, ask Slack to stop retrying.
                 .withHeaders(mapOf("X-Slack-No-Retry" to "1"))
@@ -108,16 +112,16 @@ class SlackEventHandler(
         } else null
     }
 
-    private fun createUrlVerification(verification: UrlVerification, log: LambdaLogger): APIGatewayProxyResponseEvent {
-        log.log("URL verification request")
+    private fun createUrlVerification(verification: UrlVerification): APIGatewayProxyResponseEvent {
+        log.info { "URL verification request" }
         return APIGatewayProxyResponseEvent()
             .withStatusCode(200)
             .withBody(verification.challenge)
     }
 
-    private fun determineResponse(chatMessage: ChatMessage, log: LambdaLogger): String? = when {
+    private fun determineResponse(chatMessage: ChatMessage): String? = when {
         responses.values.isEmpty() -> {
-            log.log("No responses defined.")
+            log.info { "No responses defined." }
             null
         }
         chatMessage.isMention || role(random, responseProbability) -> responses.values.random()
@@ -131,8 +135,8 @@ class SlackEventHandler(
             else -> random.nextDouble(0.0, 1.0) + probability >= 1.0
         }
 
-    private fun respond(response: String, message: ChatMessage, log: LambdaLogger) {
+    private fun respond(response: String, message: ChatMessage) {
         val result = slackInterface.postMessage(response, message.channel).getOrThrow()
-        log.log("Post message result: $result")
+        log.debug { "Post message result: $result" }
     }
 }

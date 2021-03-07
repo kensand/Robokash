@@ -14,21 +14,26 @@ compileJava {
     targetCompatibility = '11'
 }
 
-def KOTLIN_VERSION = "1.4.10"
-def JACKSON_VERSION = "2.11.3"
 def CDK_VERSION = "1.71.0"
+def JACKSON_VERSION = "2.11.3"
 def JUNIT_VERSION = "5.3.1"
 def KOTEST_VERSION = "4.3.1"
+def KOTLIN_VERSION = "1.4.10"
 
 dependencies {
+    // Using Logback because Log4j2 takes like 5 seconds to initialize which sucks for lambda cold starts.
+    implementation "ch.qos.logback:logback-classic:1.2.3"
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.0'
     implementation 'com.amazonaws:aws-lambda-java-events:3.1.0'
+    implementation 'io.github.microutils:kotlin-logging-jvm:2.0.5'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$KOTLIN_VERSION"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$KOTLIN_VERSION"
+
     implementation "com.fasterxml.jackson.core:jackson-core:$JACKSON_VERSION"
     implementation "com.fasterxml.jackson.core:jackson-databind:$JACKSON_VERSION"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$JACKSON_VERSION"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$JACKSON_VERSION"
+
     implementation "software.amazon.awscdk:core:$CDK_VERSION"
     implementation "software.amazon.awscdk:lambda:$CDK_VERSION"
     implementation "software.amazon.awscdk:apigatewayv2:$CDK_VERSION"
