@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'org.jetbrains.kotlin.jvm' version '1.4.10'
+    id 'jacoco'
 }
 
 apply plugin : "java"
@@ -62,6 +63,15 @@ compileTestKotlin {
 
 test {
     useJUnitPlatform()
+    finalizedBy "jacocoTestReport"
+}
+
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: 'com/github/goodwillparking/robokash/infra/**')
+        }))
+    }
 }
 
 wrapper {
@@ -80,7 +90,7 @@ jar {
         ]
     }
 
-    dependsOn 'compileResponses', 'test'
+    dependsOn 'test', 'compileResponses'
 }
 
 // TODO: Don't synth again if sources didn't change.
