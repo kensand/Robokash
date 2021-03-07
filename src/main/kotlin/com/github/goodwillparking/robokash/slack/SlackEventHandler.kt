@@ -7,16 +7,13 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.github.goodwillparking.robokash.Responses
 import com.github.goodwillparking.robokash.slack.event.ChatMessage
-import com.github.goodwillparking.robokash.slack.event.EventSerializer
+import com.github.goodwillparking.robokash.slack.event.DefaultSerializer
+import com.github.goodwillparking.robokash.slack.event.Event
 import com.github.goodwillparking.robokash.slack.event.EventWrapper
 import com.github.goodwillparking.robokash.slack.event.Unknown
 import com.github.goodwillparking.robokash.slack.event.UnknownInner
 import com.github.goodwillparking.robokash.slack.event.UrlVerification
 import com.github.goodwillparking.robokash.util.ResourceUtil
-import java.io.DataOutputStream
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
 import kotlin.random.Random
 
 /**
@@ -35,7 +32,7 @@ class SlackEventHandler(
 
         private val DEFAULT_RESPONSE_PROVIDER: () -> Responses = {
             val text = ResourceUtil.loadTextResource("/responses.json")
-            EventSerializer.objectMapper.readValue(text, Responses::class.java)
+            DefaultSerializer.objectMapper.readValue(text, Responses::class.java)
         }
     }
 
@@ -67,7 +64,7 @@ class SlackEventHandler(
                 .withStatusCode(200)
         }
 
-        return when (val event = EventSerializer.deserialize(input.body)) {
+        return when (val event = DefaultSerializer.deserialize<Event>(input.body)) {
             is EventWrapper -> {
                 when (val inner = event.event) {
                     is ChatMessage -> {

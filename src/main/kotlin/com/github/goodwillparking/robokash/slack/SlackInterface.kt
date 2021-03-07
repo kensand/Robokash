@@ -1,8 +1,7 @@
 package com.github.goodwillparking.robokash.slack
 
-import com.github.goodwillparking.robokash.slack.event.EventSerializer
+import com.github.goodwillparking.robokash.slack.event.DefaultSerializer
 import java.io.DataOutputStream
-import java.io.InputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
@@ -31,8 +30,8 @@ class LiveSlackInterface : SlackInterface {
             // Send request
             DataOutputStream(connection.outputStream).use {
                 it.writeBytes(
-                    EventSerializer.objectMapper.writeValueAsString(
-                        PostMessage(channelId.value, message)
+                    DefaultSerializer.objectMapper.writeValueAsString(
+                        PostMessage(channelId, message)
                     )
                 )
             }

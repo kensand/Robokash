@@ -54,7 +54,7 @@ private inline fun <reified T : Any> Any.deserializeFromFile(fileName: String, n
 
 private fun <T : Any> deserializeFromFile(fileName: String, type: KClass<T>, block: (T) -> Unit = { }) {
     loadTextResource("/slack/events/$fileName.json").asClue { json ->
-        EventSerializer.deserialize(json).asClue { deserialized ->
+        DefaultSerializer.deserialize<Event>(json).asClue { deserialized ->
             deserialized should beInstanceOf(type)
             block(deserialized as T)
         }

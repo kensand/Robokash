@@ -6,19 +6,23 @@ import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PRO
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.github.goodwillparking.robokash.slack.BoxedValue
 import com.github.goodwillparking.robokash.slack.ChannelId
 import com.github.goodwillparking.robokash.slack.UserId
 
-object EventSerializer {
+object DefaultSerializer {
     val objectMapper: ObjectMapper = ObjectMapper()
         .registerModule(KotlinModule())
         .registerModule(SlackModule)
         .registerModule(JavaTimeModule())
         .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
-    fun deserialize(json: String) = objectMapper.readValue(json, Event::class.java)
+    fun serialize(any: Any): String = objectMapper.writeValueAsString(any)
+
+    inline fun <reified T> deserialize(json: String): T = objectMapper.readValue(json, T::class.java)
 }
 
 private object SlackModule : SimpleModule(
@@ -27,6 +31,9 @@ private object SlackModule : SimpleModule(
     mapOf(
         UserId::class.java to UserIdDeserializer,
         ChannelId::class.java to ChannelIdDeserializer,
+    ),
+    listOf(
+        ToStringSerializer(BoxedValue::class.java)
     )
 )
 
