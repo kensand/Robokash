@@ -1,4 +1,4 @@
-package com.github.goodwillparking.robokash.slack.event
+package com.github.goodwillparking.robokash.util
 
 import com.fasterxml.jackson.core.Version
 import com.fasterxml.jackson.databind.DeserializationContext

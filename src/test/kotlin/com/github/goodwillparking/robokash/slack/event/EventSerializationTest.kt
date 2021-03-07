@@ -1,5 +1,6 @@
 package com.github.goodwillparking.robokash.slack.event
 
+import com.github.goodwillparking.robokash.util.DefaultSerializer
 import com.github.goodwillparking.robokash.util.ResourceUtil.loadTextResource
 import io.kotest.assertions.asClue
 import io.kotest.core.datatest.forAll

@@ -4,10 +4,9 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
-import com.github.goodwillparking.robokash.Responses
 import com.github.goodwillparking.robokash.slack.event.ChatMessage
-import com.github.goodwillparking.robokash.slack.event.DefaultSerializer
-import com.github.goodwillparking.robokash.slack.event.DefaultSerializer.deserialize
+import com.github.goodwillparking.robokash.util.DefaultSerializer
+import com.github.goodwillparking.robokash.util.DefaultSerializer.deserialize
 import com.github.goodwillparking.robokash.slack.event.Event
 import com.github.goodwillparking.robokash.slack.event.EventWrapper
 import com.github.goodwillparking.robokash.slack.event.Unknown

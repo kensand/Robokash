@@ -1,15 +1,14 @@
 package com.github.goodwillparking.robokash.slack
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
-import com.github.goodwillparking.robokash.Responses
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.AUTH_VERSION
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.NO_RETRY_HEADER
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.RETRY_COUNT_HEADER
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.SIGNATURE_HEADER
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.TIMESTAMP_HEADER
-import com.github.goodwillparking.robokash.slack.Try.Success
+import com.github.goodwillparking.robokash.util.Try.Success
 import com.github.goodwillparking.robokash.slack.event.ChatMessage
-import com.github.goodwillparking.robokash.slack.event.DefaultSerializer.serialize
+import com.github.goodwillparking.robokash.util.DefaultSerializer.serialize
 import com.github.goodwillparking.robokash.slack.event.Event
 import com.github.goodwillparking.robokash.slack.event.EventWrapper
 import com.github.goodwillparking.robokash.slack.event.UrlVerification

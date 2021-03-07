@@ -1,4 +1,4 @@
-package com.github.goodwillparking.robokash.slack
+package com.github.goodwillparking.robokash.util
 
 sealed class Try<T> {
 

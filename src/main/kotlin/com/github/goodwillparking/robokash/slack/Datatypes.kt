@@ -26,3 +26,6 @@ class ChannelId(value: String) : BoxedString(value)
 data class PostMessage(val channel: ChannelId, val text: String)
 
 data class BotInstanceProperties(val accessToken: String, val signingSecret: String, val userId: UserId)
+data class Responses(val values: List<String>) {
+    constructor(response: String): this(listOf(response))
+}

@@ -1,6 +1,7 @@
 package com.github.goodwillparking.robokash.slack
 
-import com.github.goodwillparking.robokash.slack.event.DefaultSerializer
+import com.github.goodwillparking.robokash.util.DefaultSerializer
+import com.github.goodwillparking.robokash.util.Try
 import java.io.DataOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
