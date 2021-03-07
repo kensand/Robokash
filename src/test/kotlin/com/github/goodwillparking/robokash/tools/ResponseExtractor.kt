@@ -16,9 +16,10 @@ fun main(vararg args: String) {
     val outputDir = args[0]
 
     val json = ResourceUtil.loadTextResource("/raw-messages.json")
-    val messages = objectMapper.readValue(json, object : TypeReference<List<LoggedMessage>>() {})
+    val messages = objectMapper.readValue(json, object : TypeReference<List<MessageWrapper>>() {})
+        .map { it.message }
     val responses = Responses(messages.map {
-        it.msg.replace(leadingQuoteRegex, "")
+        it.text.replace(leadingQuoteRegex, "")
             .replace(newlineQuoteRegex, "\n")
     }.filter { !it.contains(timestampRegex) })
 
@@ -28,4 +29,6 @@ fun main(vararg args: String) {
     File("$outputDir/responses.json").writeText(responsesJson)
 }
 
-private data class LoggedMessage(val ts: Instant, val msg: String)
+private data class MessageWrapper(val message: LoggedMessage, val timestamp: Instant)
+
+private data class LoggedMessage(val text: String)
