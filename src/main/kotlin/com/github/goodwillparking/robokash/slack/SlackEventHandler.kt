@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.github.goodwillparking.robokash.Responses
 import com.github.goodwillparking.robokash.slack.event.ChatMessage
 import com.github.goodwillparking.robokash.slack.event.DefaultSerializer
+import com.github.goodwillparking.robokash.slack.event.DefaultSerializer.deserialize
 import com.github.goodwillparking.robokash.slack.event.Event
 import com.github.goodwillparking.robokash.slack.event.EventWrapper
 import com.github.goodwillparking.robokash.slack.event.Unknown
@@ -14,6 +15,7 @@ import com.github.goodwillparking.robokash.slack.event.UnknownInner
 import com.github.goodwillparking.robokash.slack.event.UrlVerification
 import com.github.goodwillparking.robokash.util.ResourceUtil
 import mu.KotlinLogging
+import java.time.Instant
 import kotlin.random.Random
 
 private val log = KotlinLogging.logger { }
@@ -23,29 +25,30 @@ private val log = KotlinLogging.logger { }
  */
 class SlackEventHandler(
     val props: BotInstanceProperties = BotInstanceProperties(
-        botAccessToken = System.getenv("BOT_ACCESS_TOKEN"),
-        botSigningSecret = System.getenv("BOT_SIGNING_SECRET"),
-        botUserId = UserId(System.getenv("BOT_USER_ID"))
+        accessToken = System.getenv("BOT_ACCESS_TOKEN"),
+        signingSecret = System.getenv("BOT_SIGNING_SECRET"),
+        userId = UserId(System.getenv("BOT_USER_ID"))
     ),
     val random: Random = Random.Default,
     val slackInterface: SlackInterface = LiveSlackInterface(
-        botAccessToken = props.botAccessToken
+        botAccessToken = props.accessToken
     ),
+    val responseProbability: Double = System.getenv("RESPONSE_CHANCE").toDouble(),
     responseProvider: () -> Responses = DEFAULT_RESPONSE_PROVIDER
 ) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     companion object {
         // It is always v0
         // https://api.slack.com/authentication/verifying-requests-from-slack#verifying-requests-from-slack-using-signing-secrets__a-recipe-for-security__how-to-make-a-request-signature-in-4-easy-steps-an-overview
-        private const val AUTH_VERSION = "v0"
+        internal const val AUTH_VERSION = "v0"
+        internal const val TIMESTAMP_HEADER = "X-Slack-Request-Timestamp"
+        internal const val SIGNATURE_HEADER = "X-Slack-Signature"
 
         private val DEFAULT_RESPONSE_PROVIDER: () -> Responses = {
             val text = ResourceUtil.loadTextResource("/responses.json")
             DefaultSerializer.objectMapper.readValue(text, Responses::class.java)
         }
     }
-
-    private val responseProbability = System.getenv("RESPONSE_CHANCE").toDouble()
 
     private val responses: Responses by lazy(responseProvider)
 
@@ -69,11 +72,11 @@ class SlackEventHandler(
                 .withStatusCode(200)
         }
 
-        return when (val event = DefaultSerializer.deserialize<Event>(input.body)) {
-            is EventWrapper -> {
+        return when (val event = deserialize<Event>(input.body)) {
+            is EventWrapper<*> -> {
                 when (val inner = event.event) {
                     is ChatMessage -> {
-                        if (inner.user == props.botUserId) {
+                        if (inner.user == props.userId) {
                             log.info { "The event was triggered by the bot. Ignore it." }
                         } else {
                             determineResponse(inner)?.also { respond(it, inner) }
@@ -89,11 +92,13 @@ class SlackEventHandler(
     }
 
     private fun verifyCaller(input: APIGatewayProxyRequestEvent): APIGatewayProxyResponseEvent? {
-        val timestamp = requireNotNull(input.headers["X-Slack-Request-Timestamp"]) { "Missing timestamp header" }
-        val requestSig = requireNotNull(input.headers["X-Slack-Signature"]) { "Missing signature header" }
+        val timestamp = requireNotNull(input.headers[TIMESTAMP_HEADER]) { "Missing timestamp header" }
+            .let(String::toLong)
+            .let(Instant::ofEpochSecond)
+        val requestSig = requireNotNull(input.headers[SIGNATURE_HEADER]) { "Missing signature header" }
         
         val sig = Auth.produceSignature(
-            key = props.botSigningSecret,
+            key = props.signingSecret,
             body = input.body,
             timestamp = timestamp,
             version = AUTH_VERSION

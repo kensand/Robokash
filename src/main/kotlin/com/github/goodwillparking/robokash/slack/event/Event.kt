@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 )
 sealed class Event
 
-data class EventWrapper(val event: InnerEvent, val event_id: String) : Event()
+data class EventWrapper<I : InnerEvent>(val event: I, val event_id: String) : Event()
 
 data class UrlVerification(val challenge: String) : Event()
 

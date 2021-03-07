@@ -25,4 +25,4 @@ class ChannelId(value: String) : BoxedString(value)
 
 data class PostMessage(val channel: ChannelId, val text: String)
 
-data class BotInstanceProperties(val botAccessToken: String, val botSigningSecret: String, val botUserId: UserId)
+data class BotInstanceProperties(val accessToken: String, val signingSecret: String, val userId: UserId)

@@ -1,5 +1,6 @@
 package com.github.goodwillparking.robokash.slack
 
+import java.time.Instant
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -7,8 +8,8 @@ object Auth {
     private val HEX_ARRAY: ByteArray = "0123456789ABCDEF".toByteArray(Charsets.US_ASCII)
 
     // https://api.slack.com/authentication/verifying-requests-from-slack#verifying-requests-from-slack-using-signing-secrets__a-recipe-for-security__how-to-make-a-request-signature-in-4-easy-steps-an-overview
-    fun produceSignature(key: String, body: String, timestamp: String, version: String): String =
-        "$version=${encode(key, "$version:$timestamp:$body")}"
+    fun produceSignature(key: String, body: String, timestamp: Instant, version: String): String =
+        "$version=${encode(key, "$version:${timestamp.epochSecond}:$body")}"
 
     private fun encode(key: String, data: String): String {
         val hmac = Mac.getInstance("HmacSHA256")

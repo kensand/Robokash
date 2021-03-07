@@ -7,7 +7,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 interface SlackInterface {
-    fun postMessage(message: String, channelId: ChannelId): Result<String>
+    fun postMessage(message: String, channelId: ChannelId): Try<String>
 }
 
 class LiveSlackInterface(val botAccessToken: String) : SlackInterface {
@@ -16,7 +16,7 @@ class LiveSlackInterface(val botAccessToken: String) : SlackInterface {
         private const val API_PATH = "https://slack.com/api/"
     }
 
-    override fun postMessage(message: String, channelId: ChannelId): Result<String> = runCatching {
+    override fun postMessage(message: String, channelId: ChannelId): Try<String> = Try.of {
         // https://api.slack.com/methods/chat.postMessage
         val connection = URL(API_PATH + "chat.postMessage").openConnection() as HttpURLConnection
 

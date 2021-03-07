@@ -23,7 +23,7 @@ internal class EventSerializationTest : FreeSpec({
     "inner events should deserialize" - {
         "ChatMessage" - {
             "mention" {
-                deserializeFromFile<EventWrapper>("mention") { deserialized ->
+                deserializeFromFile<EventWrapper<*>>("mention") { deserialized ->
                     deserialized.event.apply {
                         shouldBeInstanceOf<ChatMessage>()
                         isMention shouldBe true
@@ -31,7 +31,7 @@ internal class EventSerializationTest : FreeSpec({
                 }
             }
             "message" {
-                deserializeFromFile<EventWrapper>("message") { deserialized ->
+                deserializeFromFile<EventWrapper<*>>("message") { deserialized ->
                     deserialized.event.apply {
                         shouldBeInstanceOf<ChatMessage>()
                         isMention shouldBe false
@@ -40,7 +40,7 @@ internal class EventSerializationTest : FreeSpec({
             }
         }
         "unknown" {
-            deserializeFromFile<EventWrapper>("reaction-added") { it.event.shouldBeInstanceOf<UnknownInner>() }
+            deserializeFromFile<EventWrapper<*>>("reaction-added") { it.event.shouldBeInstanceOf<UnknownInner>() }
         }
     }
 })
