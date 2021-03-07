@@ -10,7 +10,7 @@ interface SlackInterface {
     fun postMessage(message: String, channelId: ChannelId): Result<String>
 }
 
-class LiveSlackInterface : SlackInterface {
+class LiveSlackInterface(val botAccessToken: String) : SlackInterface {
 
     companion object {
         private const val API_PATH = "https://slack.com/api/"
@@ -24,7 +24,7 @@ class LiveSlackInterface : SlackInterface {
             connection.requestMethod = "POST"
             // https://api.slack.com/web#slack-web-api__basics__post-bodies__json-encoded-bodies
             connection.setRequestProperty("Content-Type", "application/json")
-            connection.setRequestProperty("Authorization", "Bearer ${System.getenv("BOT_ACCESS_TOKEN")}")
+            connection.setRequestProperty("Authorization", "Bearer $botAccessToken")
             connection.doOutput = true
 
             // Send request

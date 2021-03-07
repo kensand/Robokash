@@ -21,7 +21,9 @@ import kotlin.random.Random
  */
 class SlackEventHandler(
     val random: Random = Random.Default,
-    val slackInterface: SlackInterface = LiveSlackInterface(),
+    val slackInterface: SlackInterface = LiveSlackInterface(
+        botAccessToken = System.getenv("BOT_ACCESS_TOKEN")
+    ),
     responseProvider: () -> Responses = DEFAULT_RESPONSE_PROVIDER
 ) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
