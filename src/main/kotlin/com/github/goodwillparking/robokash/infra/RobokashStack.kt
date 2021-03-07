@@ -15,6 +15,7 @@ import software.amazon.awscdk.services.lambda.Code
 import software.amazon.awscdk.services.lambda.Function
 import software.amazon.awscdk.services.lambda.FunctionProps
 import software.amazon.awscdk.services.lambda.Runtime
+import software.amazon.awscdk.services.logs.RetentionDays
 
 class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
 
@@ -29,6 +30,7 @@ class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
             .timeout(Duration.seconds(30))
             .retryAttempts(0)
             .reservedConcurrentExecutions(2)
+            .logRetention(RetentionDays.SIX_MONTHS)
             .environment(
                 mapOf(
                     "BOT_ACCESS_TOKEN" to "{{resolve:ssm:$id-token:1}}",
