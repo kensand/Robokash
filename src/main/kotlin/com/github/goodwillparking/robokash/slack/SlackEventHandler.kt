@@ -41,8 +41,10 @@ class SlackEventHandler(
         // It is always v0
         // https://api.slack.com/authentication/verifying-requests-from-slack#verifying-requests-from-slack-using-signing-secrets__a-recipe-for-security__how-to-make-a-request-signature-in-4-easy-steps-an-overview
         internal const val AUTH_VERSION = "v0"
-        internal const val TIMESTAMP_HEADER = "X-Slack-Request-Timestamp"
+        internal const val NO_RETRY_HEADER = "X-Slack-No-Retry"
+        internal const val RETRY_COUNT_HEADER = "X-Slack-Retry-Num"
         internal const val SIGNATURE_HEADER = "X-Slack-Signature"
+        internal const val TIMESTAMP_HEADER = "X-Slack-Request-Timestamp"
 
         private val DEFAULT_RESPONSE_PROVIDER: () -> Responses = {
             val text = ResourceUtil.loadTextResource("/responses.json")
@@ -58,7 +60,7 @@ class SlackEventHandler(
 
         verifyCaller(input)?.also { return it }
 
-        if ("X-Slack-Retry-Num" in input.headers) {
+        if (RETRY_COUNT_HEADER in input.headers) {
             // Slack will retry up to 3 times (4 total attempts).
             // Robokash can be a bit slow, so he might timeout and trigger some retries.
             // Ignore the retries because Robokash probably got the initial request
@@ -68,7 +70,7 @@ class SlackEventHandler(
             return APIGatewayProxyResponseEvent()
                 // Ask Slack to pls stahp
                 // https://api.slack.com/events-api#the-events-api__field-guide__error-handling__graceful-retries__turning-retries-off
-                .withHeaders(mapOf("X-Slack-No-Retry" to "1"))
+                .withHeaders(mapOf(NO_RETRY_HEADER to "1"))
                 .withStatusCode(200)
         }
 
@@ -108,7 +110,7 @@ class SlackEventHandler(
             log.warn { "Unauthorized request: $sig" }
             APIGatewayProxyResponseEvent()
                 // In case this really was Slack and we've got a bug in our auth code, ask Slack to stop retrying.
-                .withHeaders(mapOf("X-Slack-No-Retry" to "1"))
+                .withHeaders(mapOf(NO_RETRY_HEADER to "1"))
                 .withStatusCode(403)
         } else null
     }

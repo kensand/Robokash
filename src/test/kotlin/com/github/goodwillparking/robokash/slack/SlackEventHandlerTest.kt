@@ -3,13 +3,18 @@ package com.github.goodwillparking.robokash.slack
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.github.goodwillparking.robokash.Responses
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.AUTH_VERSION
+import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.NO_RETRY_HEADER
+import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.RETRY_COUNT_HEADER
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.SIGNATURE_HEADER
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.TIMESTAMP_HEADER
 import com.github.goodwillparking.robokash.slack.Try.Success
 import com.github.goodwillparking.robokash.slack.event.ChatMessage
 import com.github.goodwillparking.robokash.slack.event.DefaultSerializer.serialize
+import com.github.goodwillparking.robokash.slack.event.Event
 import com.github.goodwillparking.robokash.slack.event.EventWrapper
+import com.github.goodwillparking.robokash.slack.event.UrlVerification
 import io.kotest.core.spec.style.FreeSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -71,6 +76,42 @@ internal class SlackEventHandlerTest : FreeSpec({
             }
         }
     }
+
+    "bot should deny requests with invalid signatures" {
+        with(testHandler()) {
+            val apiGatewayRequest = createRequest(chatMessageMention, overrideSignature = "invalid")
+            handle(
+                request = apiGatewayRequest,
+                expectedStatusCode = 403,
+                expectedHeaders = mapOf(
+                    NO_RETRY_HEADER to "1" // Can be any arbitrary value.
+                )
+            )
+        }
+    }
+
+    "bot should respond to url verification requests" {
+        with(testHandler()) {
+            val urlVerification = UrlVerification("It's time to d-d-d-d, d-d-d-d-duel!")
+            val apiGatewayRequest = createRequest(urlVerification)
+            handle(
+                request = apiGatewayRequest,
+                expectedStatusCode = 200,
+                expectedBody = urlVerification.challenge
+            )
+        }
+    }
+
+    "bot should not respond to retries and request no more retries" {
+        with(testHandler()) {
+            val apiGatewayRequest = createRequest(chatMessageMention)
+                .addHeaders(RETRY_COUNT_HEADER to "1")
+            handle(
+                request = apiGatewayRequest,
+                expectedHeaders = mapOf(NO_RETRY_HEADER to "1")
+            )
+        }
+    }
 })
 
 private val channelId = ChannelId("channel")
@@ -95,7 +136,16 @@ private val chatMessageMention = EventWrapper(
     "slackEventId"
 )
 
-private fun SlackEventHandler.handle(request: APIGatewayProxyRequestEvent) = handleRequest(request, mockk())
+private fun SlackEventHandler.handle(
+    request: APIGatewayProxyRequestEvent,
+    expectedStatusCode: Int = 200,
+    expectedHeaders: Map<String, String>? = null,
+    expectedBody: String? = null
+) = handleRequest(request, mockk()).apply {
+    statusCode shouldBe expectedStatusCode
+    headers shouldBe expectedHeaders
+    body shouldBe expectedBody
+}
 
 private fun SlackEventHandler.expectRoll(result: Double) {
     require(result >= 0)
@@ -111,11 +161,14 @@ private fun SlackEventHandler.verifySuccessfulPost(channel: ChannelId = channelI
     verify(exactly = 1) { slackInterface.postMessage(any(), channel) }
 }
 
-private fun SlackEventHandler.createRequest(wrapper: EventWrapper<*>): APIGatewayProxyRequestEvent {
-    val body = serialize(wrapper)
+private fun SlackEventHandler.createRequest(
+    event: Event,
+    overrideSignature: String? = null
+): APIGatewayProxyRequestEvent {
+    val body = serialize(event)
     val requestTime = Instant.now()
 
-    val signature = Auth.produceSignature(
+    val signature = overrideSignature ?: Auth.produceSignature(
         key = props.signingSecret,
         body = body,
         requestTime,
@@ -129,6 +182,9 @@ private fun SlackEventHandler.createRequest(wrapper: EventWrapper<*>): APIGatewa
             SIGNATURE_HEADER to signature
         ))
 }
+
+private fun APIGatewayProxyRequestEvent.addHeaders(vararg headers: Pair<String, String>) =
+    withHeaders(this.headers + headers.asIterable())
 
 private fun testHandler(probability: Double = 0.0) = SlackEventHandler(
     props = BotInstanceProperties(
