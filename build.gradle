@@ -14,15 +14,13 @@ compileJava {
     targetCompatibility = '11'
 }
 
-def CDK_VERSION = "1.71.0"
+def CDK_VERSION = "1.92.0"
 def JACKSON_VERSION = "2.11.3"
 def JUNIT_VERSION = "5.3.1"
 def KOTEST_VERSION = "4.3.1"
 def KOTLIN_VERSION = "1.4.10"
 
 dependencies {
-    // Using Logback because Log4j2 takes like 5 seconds to initialize which sucks for lambda cold starts.
-    implementation "ch.qos.logback:logback-classic:1.2.3"
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.0'
     implementation 'com.amazonaws:aws-lambda-java-events:3.1.0'
     implementation 'io.github.microutils:kotlin-logging-jvm:2.0.5'
@@ -37,6 +35,10 @@ dependencies {
     implementation "software.amazon.awscdk:core:$CDK_VERSION"
     implementation "software.amazon.awscdk:lambda:$CDK_VERSION"
     implementation "software.amazon.awscdk:apigatewayv2:$CDK_VERSION"
+    implementation "software.amazon.awscdk:apigatewayv2-integrations:$CDK_VERSION"
+
+    // Using Logback because Log4j2 takes like 5 seconds to initialize which sucks for lambda cold starts.
+    runtimeOnly "ch.qos.logback:logback-classic:1.2.3"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:$JUNIT_VERSION"
     testImplementation "io.kotest:kotest-runner-junit5:$KOTEST_VERSION"
@@ -90,6 +92,7 @@ task cdk(type: JavaExec) {
     dependsOn(test, jar) // Jar must exist for cdk deploy
 }
 
+// TODO: Don't compile responses if the source file didn't change.
 task compileResponses(type: JavaExec) {
     main = "com.github.goodwillparking.robokash.tools.ResponseExtractorKt"
     classpath = sourceSets.test.runtimeClasspath

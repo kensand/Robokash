@@ -18,10 +18,6 @@ import kotlin.random.Random
 
 private val log = KotlinLogging.logger { }
 
-fun main() {
-    log.debug { "test" }
-}
-
 /**
  * Handler for requests to Lambda function.
  */

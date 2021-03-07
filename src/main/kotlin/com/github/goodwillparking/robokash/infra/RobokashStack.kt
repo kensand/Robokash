@@ -8,9 +8,9 @@ import software.amazon.awscdk.services.apigatewayv2.AddRoutesOptions
 import software.amazon.awscdk.services.apigatewayv2.HttpApi
 import software.amazon.awscdk.services.apigatewayv2.HttpApiProps
 import software.amazon.awscdk.services.apigatewayv2.HttpMethod
-import software.amazon.awscdk.services.apigatewayv2.LambdaProxyIntegration
-import software.amazon.awscdk.services.apigatewayv2.LambdaProxyIntegrationProps
 import software.amazon.awscdk.services.apigatewayv2.PayloadFormatVersion
+import software.amazon.awscdk.services.apigatewayv2.integrations.LambdaProxyIntegration
+import software.amazon.awscdk.services.apigatewayv2.integrations.LambdaProxyIntegrationProps
 import software.amazon.awscdk.services.lambda.Code
 import software.amazon.awscdk.services.lambda.Function
 import software.amazon.awscdk.services.lambda.FunctionProps
