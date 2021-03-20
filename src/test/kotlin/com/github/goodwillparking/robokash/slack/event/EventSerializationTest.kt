@@ -1,10 +1,12 @@
 package com.github.goodwillparking.robokash.slack.event
 
+import com.github.goodwillparking.robokash.slack.UserId
 import com.github.goodwillparking.robokash.util.DefaultSerializer
 import com.github.goodwillparking.robokash.util.ResourceUtil.loadTextResource
 import io.kotest.assertions.asClue
 import io.kotest.core.datatest.forAll
 import io.kotest.core.spec.style.FreeSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.beInstanceOf
@@ -16,32 +18,24 @@ internal class EventSerializationTest : FreeSpec({
     "events should deserialize" - {
         forAll<EventSetup<*>>(
             "url-verification" to { EventSetup(it, UrlVerification::class) },
-            "wrapper" to EventSetup("message", EventWrapper::class),
-            "unknown" to EventSetup("app-requested", Unknown::class)
+            "event-callback" to EventSetup("message", EventCallback::class),
+            "unknown" to EventSetup("app-requested", UnknownEvent::class)
         ) { (fileName, eventType) -> deserializeFromFile(fileName, eventType) }
     }
 
     "inner events should deserialize" - {
-        "ChatMessage" - {
-            "mention" {
-                deserializeFromFile<EventWrapper<*>>("mention") { deserialized ->
-                    deserialized.event.apply {
-                        shouldBeInstanceOf<ChatMessage>()
-                        isMention shouldBe true
-                    }
+        "message" {
+            deserializeFromFile<EventCallback<*>>("message") { deserialized ->
+                deserialized.event.apply {
+                    shouldBeInstanceOf<Message>()
+                    text shouldBe "<@ABCDEFG> a b c <!channel>"
+                    mentions shouldContain UserId("ABCDEFG")
                 }
             }
-            "message" {
-                deserializeFromFile<EventWrapper<*>>("message") { deserialized ->
-                    deserialized.event.apply {
-                        shouldBeInstanceOf<ChatMessage>()
-                        isMention shouldBe false
-                    }
-                }
-            }
+
         }
         "unknown" {
-            deserializeFromFile<EventWrapper<*>>("reaction-added") { it.event.shouldBeInstanceOf<UnknownInner>() }
+            deserializeFromFile<EventCallback<*>>("reaction-added") { it.event.shouldBeInstanceOf<UnknownInnerEvent>() }
         }
     }
 })

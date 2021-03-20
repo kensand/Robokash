@@ -6,9 +6,12 @@ import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.NO_
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.RETRY_COUNT_HEADER
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.SIGNATURE_HEADER
 import com.github.goodwillparking.robokash.slack.SlackEventHandler.Companion.TIMESTAMP_HEADER
-import com.github.goodwillparking.robokash.slack.event.ChatMessage
+import com.github.goodwillparking.robokash.slack.event.Message
 import com.github.goodwillparking.robokash.slack.event.Event
-import com.github.goodwillparking.robokash.slack.event.EventWrapper
+import com.github.goodwillparking.robokash.slack.event.EventCallback
+import com.github.goodwillparking.robokash.slack.event.RichText
+import com.github.goodwillparking.robokash.slack.event.RichTextSection
+import com.github.goodwillparking.robokash.slack.event.RichTextSectionElement
 import com.github.goodwillparking.robokash.slack.event.UrlVerification
 import com.github.goodwillparking.robokash.util.DefaultSerializer.serialize
 import com.github.goodwillparking.robokash.util.ResourceUtil.loadTextResource
@@ -136,23 +139,12 @@ internal class SlackEventHandlerTest : FreeSpec({
 
 private val channelId = ChannelId("channel")
 
-private val chatMessage = EventWrapper(
-    ChatMessage(
-        text = "Dude!",
-        user = UserId("triggerUser"),
-        channel = channelId,
-        isMention = false
-    ),
-    "slackEventId"
-)
+private val botId = UserId("botUser")
 
-private val chatMessageMention = EventWrapper(
-    ChatMessage(
-        text = "Dude!",
-        user = UserId("triggerUser"),
-        channel = channelId,
-        isMention = true
-    ),
+private val chatMessage = EventCallback(createMessage(), "slackEventId")
+
+private val chatMessageMention = EventCallback(
+    createMessage(mentions = listOf(botId)),
     "slackEventId"
 )
 
@@ -214,10 +206,29 @@ private fun testHandler(probability: Double = 0.0) = SlackEventHandler(
     props = BotInstanceProperties(
         accessToken = "accessToken",
         signingSecret = "signingSecret",
-        userId = UserId("botUser")
+        userId = botId
     ),
     slackInterface = mockk(),
     random = mockk(),
     responseProvider = { Responses("testResponse") },
     responseProbability = probability
 )
+
+fun createMessage(
+    baseText: String = "Dude! ",
+    user: UserId = UserId("triggerUser"),
+    channel: ChannelId = channelId,
+    mentions: List<UserId> = emptyList()
+): Message {
+    val text = baseText + mentions.joinToString(separator = " ", prefix = "<@", postfix = ">")
+
+    val elements = listOf<RichTextSectionElement>(RichTextSectionElement.Text(baseText)) +
+        mentions.map { RichTextSectionElement.User(it) }
+
+    return Message(
+        text = text,
+        user = user,
+        channel = channel,
+        blocks = listOf(RichText(listOf(RichTextSection(elements))))
+    )
+}

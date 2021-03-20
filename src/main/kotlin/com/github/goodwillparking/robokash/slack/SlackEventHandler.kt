@@ -4,17 +4,16 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
-import com.github.goodwillparking.robokash.slack.event.ChatMessage
+import com.github.goodwillparking.robokash.slack.event.Event
+import com.github.goodwillparking.robokash.slack.event.EventCallback
+import com.github.goodwillparking.robokash.slack.event.Message
+import com.github.goodwillparking.robokash.slack.event.UnknownEvent
+import com.github.goodwillparking.robokash.slack.event.UnknownInnerEvent
+import com.github.goodwillparking.robokash.slack.event.UrlVerification
 import com.github.goodwillparking.robokash.util.DefaultSerializer
 import com.github.goodwillparking.robokash.util.DefaultSerializer.deserialize
-import com.github.goodwillparking.robokash.slack.event.Event
-import com.github.goodwillparking.robokash.slack.event.EventWrapper
-import com.github.goodwillparking.robokash.slack.event.Unknown
-import com.github.goodwillparking.robokash.slack.event.UnknownInner
-import com.github.goodwillparking.robokash.slack.event.UrlVerification
 import com.github.goodwillparking.robokash.util.ResourceUtil
 import mu.KotlinLogging
-import java.lang.Exception
 import java.time.Instant
 import kotlin.random.Random
 
@@ -109,14 +108,14 @@ class SlackEventHandler(
         .withStatusCode(403)
 
     private fun parseEvent(request: APIGatewayProxyRequestEvent) = when (val event = deserialize<Event>(request.body)) {
-        is EventWrapper<*> -> {
+        is EventCallback<*> -> {
             when (val inner = event.event) {
-                is ChatMessage -> createChatMessageResponse(inner)
-                is UnknownInner -> throw UnknownSlackInnerEventException(inner)
+                is Message -> createChatMessageResponse(inner)
+                is UnknownInnerEvent -> throw UnknownSlackInnerEventException(inner)
             }
         }
         is UrlVerification -> createUrlVerificationResponse(event)
-        is Unknown -> throw UnknownSlackEventException(event)
+        is UnknownEvent -> throw UnknownSlackEventException(event)
     }
 
     private fun createUrlVerificationResponse(verification: UrlVerification): APIGatewayProxyResponseEvent {
@@ -126,7 +125,7 @@ class SlackEventHandler(
             .withBody(verification.challenge)
     }
 
-    private fun createChatMessageResponse(message: ChatMessage): APIGatewayProxyResponseEvent {
+    private fun createChatMessageResponse(message: Message): APIGatewayProxyResponseEvent {
         if (message.user == props.userId) {
             log.info { "The event was triggered by the bot. Ignore it." }
         } else {
@@ -135,14 +134,14 @@ class SlackEventHandler(
         return APIGatewayProxyResponseEvent().withStatusCode(200)
     }
 
-    private fun determineResponse(chatMessage: ChatMessage): String? {
+    private fun determineResponse(message: Message): String? {
         fun generateResponse() = responses.values.random()
         return when {
             responses.values.isEmpty() -> {
                 log.warn { "No responses defined." }
                 null
             }
-            chatMessage.isMention -> {
+            props.userId in message.mentions -> {
                 log.info { "Bot was mentioned. Skipping roll" }
                 generateResponse()
             }
@@ -170,7 +169,7 @@ class SlackEventHandler(
         )
     }
 
-    private fun respond(response: String, message: ChatMessage) {
+    private fun respond(response: String, message: Message) {
         log.info { "Posting message $response" }
         val result = slackInterface.postMessage(response, message.channel).getOrThrow()
         log.debug { "Post message result: $result" }

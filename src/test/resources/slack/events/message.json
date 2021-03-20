@@ -5,7 +5,7 @@
   "event": {
     "client_msg_id": "72868aa0-659e-4916-969d-561b768dd5c8",
     "type": "message",
-    "text": "asdf",
+    "text": "<@ABCDEFG> a b c <!channel>",
     "user": "fooUser",
     "ts": "1605400518.001100",
     "team": "fooTeam",
@@ -18,8 +18,16 @@
             "type": "rich_text_section",
             "elements": [
               {
+                "type": "user",
+                "user_id": "ABCDEFG"
+              },
+              {
                 "type": "text",
-                "text": "asdf"
+                "text": " a b c "
+              },
+              {
+                "type": "broadcast",
+                "range": "channel"
               }
             ]
           }
