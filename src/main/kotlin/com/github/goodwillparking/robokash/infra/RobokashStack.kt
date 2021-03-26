@@ -36,7 +36,10 @@ class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
                     "BOT_ACCESS_TOKEN" to "{{resolve:ssm:$id-token:1}}",
                     "BOT_SIGNING_SECRET" to "{{resolve:ssm:$id-signing-secret:1}}",
                     "BOT_USER_ID" to "{{resolve:ssm:$id-user-id:1}}",
-                    "RESPONSE_CHANCE" to 0.01.toString()
+                    "RESPONSE_CHANCE" to 0.01.toString(),
+                    "MAX_REPLY_PROBABILITY" to 0.05.toString(),
+                    "MAX_MENTION_REPLY_PROBABILITY" to 0.40.toString(),
+                    "MAX_REPLY_PROBABILITY_THRESHOLD" to 100.toString(),
                 )
             )
             .build()

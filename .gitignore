@@ -6,3 +6,5 @@ build/
 .gradle
 raw-messages.json
 message-filter.json
+responses.json
+user-specific-responses.json

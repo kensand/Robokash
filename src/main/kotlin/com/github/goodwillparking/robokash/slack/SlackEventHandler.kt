@@ -4,17 +4,20 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
+import com.github.goodwillparking.robokash.RandomResponseCheck
+import com.github.goodwillparking.robokash.ResponseCheck
+import com.github.goodwillparking.robokash.UserSpecificResponseCache
 import com.github.goodwillparking.robokash.slack.event.Event
 import com.github.goodwillparking.robokash.slack.event.EventCallback
 import com.github.goodwillparking.robokash.slack.event.Message
 import com.github.goodwillparking.robokash.slack.event.UnknownEvent
 import com.github.goodwillparking.robokash.slack.event.UnknownInnerEvent
 import com.github.goodwillparking.robokash.slack.event.UrlVerification
-import com.github.goodwillparking.robokash.util.DefaultSerializer
 import com.github.goodwillparking.robokash.util.DefaultSerializer.deserialize
-import com.github.goodwillparking.robokash.util.ResourceUtil
+import com.github.goodwillparking.robokash.util.ResourceUtil.loadTextResource
 import mu.KotlinLogging
 import java.time.Instant
+import kotlin.math.min
 import kotlin.random.Random
 
 private val log = KotlinLogging.logger { }
@@ -26,14 +29,21 @@ class SlackEventHandler(
     val props: BotInstanceProperties = BotInstanceProperties(
         accessToken = System.getenv("BOT_ACCESS_TOKEN"),
         signingSecret = System.getenv("BOT_SIGNING_SECRET"),
-        userId = UserId(System.getenv("BOT_USER_ID"))
+        userId = UserId(System.getenv("BOT_USER_ID")),
+        responseProbabilityConfig = ResponseProbabilityConfig(
+            // TODO: find a better way to configure this
+            responseProbability = System.getenv("RESPONSE_CHANCE").toDouble(),
+            maxReplyProbability = System.getenv("MAX_REPLY_PROBABILITY").toDouble(),
+            maxMentionReplyProbability = System.getenv("MAX_MENTION_REPLY_PROBABILITY").toDouble(),
+            maxReplyProbabilityThreshold = System.getenv("MAX_REPLY_PROBABILITY_THRESHOLD").toInt()
+        )
     ),
-    val random: Random = Random.Default,
+    val random: Random = Random,
     val slackInterface: SlackInterface = LiveSlackInterface(
         botAccessToken = props.accessToken
     ),
-    val responseProbability: Double = System.getenv("RESPONSE_CHANCE").toDouble(),
-    responseProvider: () -> Responses = DEFAULT_RESPONSE_PROVIDER
+    responseProvider: () -> Responses = DEFAULT_RESPONSE_PROVIDER,
+    responseConfigProvider: () -> UserSpecificResponseCache.Config = DEFAULT_RESPONSE_CONFIG_PROVIDER
 ) : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     companion object {
@@ -46,12 +56,19 @@ class SlackEventHandler(
         internal const val TIMESTAMP_HEADER = "X-Slack-Request-Timestamp"
 
         private val DEFAULT_RESPONSE_PROVIDER: () -> Responses = {
-            val text = ResourceUtil.loadTextResource("/responses.json")
-            DefaultSerializer.objectMapper.readValue(text, Responses::class.java)
+            deserialize(loadTextResource("/responses.json"))
+        }
+
+        private val DEFAULT_RESPONSE_CONFIG_PROVIDER: () -> UserSpecificResponseCache.Config = {
+            deserialize(loadTextResource("/user-specific-responses.json"))
         }
     }
 
     private val responses: Responses by lazy(responseProvider)
+
+    val userSpecificResponseConfig by lazy(responseConfigProvider)
+
+    private var userSpecificResponseCache = UserSpecificResponseCache(responses, userSpecificResponseConfig)
 
     override fun handleRequest(
         request: APIGatewayProxyRequestEvent,
@@ -129,28 +146,38 @@ class SlackEventHandler(
         if (message.user == props.userId) {
             log.info { "The event was triggered by the bot. Ignore it." }
         } else {
-            determineResponse(message)?.also { respond(it, message) }
+            val replyCheck = getPotentialReplies(message)
+                ?.let { RandomResponseCheck(it, getReplyProbability(message, it)) }
+            val globalCheck = RandomResponseCheck(responses, getGlobalProbability(message))
+            listOf(replyCheck, globalCheck).asSequence()
+                .map { it?.let(::role) }
+                .filterNotNull()
+                .firstOrNull()
+                ?.also { respond(it, message) }
         }
         return APIGatewayProxyResponseEvent().withStatusCode(200)
     }
 
-    private fun determineResponse(message: Message): String? {
-        fun generateResponse() = responses.values.random()
-        return when {
-            responses.values.isEmpty() -> {
-                log.warn { "No responses defined." }
-                null
-            }
-            props.userId in message.mentions -> {
-                log.info { "Bot was mentioned. Skipping roll" }
-                generateResponse()
-            }
-            else -> {
-                val result = role(random, responseProbability)
-                log.debug { result }
-                result.takeIf { it.isSuccess }?.let { generateResponse() }
-            }
+    private fun getPotentialReplies(message: Message): Responses? {
+        val (updated, responses) = userSpecificResponseCache[message.user]
+        userSpecificResponseCache = updated
+        return responses
+    }
+
+    private fun getReplyProbability(message: Message, replyResponses: Responses): Double =
+        with(props.responseProbabilityConfig) {
+            val base = if (message.mentionsBot()) maxMentionReplyProbability else maxReplyProbability
+            val multiplier = min(replyResponses.size.toDouble() / maxReplyProbabilityThreshold, 1.0)
+            base * multiplier
         }
+
+    private fun getGlobalProbability(message: Message): Double =
+        with(props.responseProbabilityConfig) { if (message.mentionsBot()) 1.0 else responseProbability }
+
+    private fun role(check: ResponseCheck): String? {
+        val result = role(random, check.probability)
+        log.debug { result }
+        return result.takeIf { it.isSuccess }?.let { check.getResponse() }
     }
 
     private fun role(random: Random, probability: Double): RoleResult {
@@ -176,4 +203,6 @@ class SlackEventHandler(
     }
 
     private data class RoleResult(val required: Double, val actual: Double, val isSuccess: Boolean)
+
+    private fun Message.mentionsBot() = props.userId in mentions
 }

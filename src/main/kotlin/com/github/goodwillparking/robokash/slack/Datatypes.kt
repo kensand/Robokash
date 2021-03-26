@@ -28,10 +28,33 @@ class ChannelId(value: String) : BoxedString(value)
 
 data class PostMessage(val channel: ChannelId, val text: String)
 
-data class BotInstanceProperties(val accessToken: String, val signingSecret: String, val userId: UserId)
+data class BotInstanceProperties(
+    val accessToken: String,
+    val signingSecret: String,
+    val userId: UserId,
+    val responseProbabilityConfig: ResponseProbabilityConfig
+)
+
+data class ResponseProbabilityConfig(
+    val responseProbability: Double,
+    val maxReplyProbability: Double,
+    val maxMentionReplyProbability: Double,
+    val maxReplyProbabilityThreshold: Int
+) {
+    init {
+        require(maxReplyProbabilityThreshold > 0) { "Threshold must be greater than zero." }
+    }
+}
 
 data class Responses(val values: List<String>) {
     constructor(response: String): this(listOf(response))
+
+    // Can't use delegate since this is deserialized: https://github.com/FasterXML/jackson-module-kotlin/issues/67
+    val size = values.size
+
+    init {
+        require(values.isNotEmpty()) { "Must have at least one response." }
+    }
 }
 
 data class UnknownSlackEventException(val unknown: UnknownEvent) :
