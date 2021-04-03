@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
+import com.github.goodwillparking.robokash.dao.sqlite.message.MessageDao
 import com.github.goodwillparking.robokash.slack.event.Event
 import com.github.goodwillparking.robokash.slack.event.EventCallback
 import com.github.goodwillparking.robokash.slack.event.Message
@@ -47,8 +48,7 @@ class SlackEventHandler(
         internal const val TIMESTAMP_HEADER = "X-Slack-Request-Timestamp"
 
         private val DEFAULT_RESPONSE_PROVIDER: () -> Responses = {
-            val text = ResourceUtil.loadTextResource("/responses.json")
-            DefaultSerializer.objectMapper.readValue(text, Responses::class.java)
+            Responses(MessageDao().getMessages().map { message -> message.text })
         }
     }
 

@@ -2,6 +2,9 @@ package com.github.goodwillparking.robokash.tools
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.github.goodwillparking.robokash.slack.Responses
+import com.github.goodwillparking.robokash.tools.extractor.LoggedMessage
+import com.github.goodwillparking.robokash.tools.extractor.MessageFilter
+import com.github.goodwillparking.robokash.tools.extractor.MessageWrapper
 import com.github.goodwillparking.robokash.util.DefaultSerializer.objectMapper
 import com.github.goodwillparking.robokash.util.ResourceUtil.loadTextResource
 import java.io.File
@@ -17,7 +20,7 @@ fun main(vararg args: String) {
 
     val json = loadTextResource("/raw-messages.json")
     val messages = objectMapper.readValue(json, object : TypeReference<List<MessageWrapper>>() {})
-        .map { it.message }
+        .map { objectMapper.readValue(it.message, object : TypeReference<LoggedMessage>() {}) }
 
     val filter = objectMapper.readValue(
         loadTextResource("/message-filter.json"),
@@ -38,9 +41,3 @@ fun main(vararg args: String) {
     val responsesJson = objectMapper.writeValueAsString(responses)
     File("$outputDir/responses.json").writeText(responsesJson)
 }
-
-private data class MessageWrapper(val message: LoggedMessage, val timestamp: Instant)
-
-private data class LoggedMessage(val text: String)
-
-private data class MessageFilter(val blockedMessages: List<String>, val regexps: List<Regex>)
