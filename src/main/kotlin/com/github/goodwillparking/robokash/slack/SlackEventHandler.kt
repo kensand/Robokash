@@ -146,14 +146,14 @@ class SlackEventHandler(
                 generateResponse()
             }
             else -> {
-                val result = role(random, responseProbability)
+                val result = roll(random, responseProbability)
                 log.debug { result }
                 result.takeIf { it.isSuccess }?.let { generateResponse() }
             }
         }
     }
 
-    private fun role(random: Random, probability: Double): RoleResult {
+    private fun roll(random: Random, probability: Double): RollResult {
         val rolled = random.nextDouble(0.0, 1.0)
         val required = 1.0 - probability
         val success = when (probability) {
@@ -162,7 +162,7 @@ class SlackEventHandler(
             else -> rolled + probability >= 1.0
         }
 
-        return RoleResult(
+        return RollResult(
             required = required,
             actual = rolled,
             isSuccess = success
@@ -175,5 +175,5 @@ class SlackEventHandler(
         log.debug { "Post message result: $result" }
     }
 
-    private data class RoleResult(val required: Double, val actual: Double, val isSuccess: Boolean)
+    private data class RollResult(val required: Double, val actual: Double, val isSuccess: Boolean)
 }
