@@ -9,6 +9,7 @@
 * Allow distinction between exact keyword match and partial match
 * Scale probabilities with number of source messages that match keyword
 * Put secrets in KMS
-* Parse message to determine if it mentions the bot instead of using app_mention event. 
-  This is to keep bot from potentially responding twice.
 
+## Bugs
+* Since retries are ignored, Robokash might not respond when he's supposed to.
+  * Should persist seen messages so Robokash can dedupe retries
