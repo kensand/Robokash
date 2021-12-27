@@ -9,8 +9,8 @@ import software.amazon.awscdk.services.apigatewayv2.HttpApi
 import software.amazon.awscdk.services.apigatewayv2.HttpApiProps
 import software.amazon.awscdk.services.apigatewayv2.HttpMethod
 import software.amazon.awscdk.services.apigatewayv2.PayloadFormatVersion
-import software.amazon.awscdk.services.apigatewayv2.integrations.LambdaProxyIntegration
-import software.amazon.awscdk.services.apigatewayv2.integrations.LambdaProxyIntegrationProps
+import software.amazon.awscdk.services.apigatewayv2.integrations.HttpLambdaIntegration
+import software.amazon.awscdk.services.apigatewayv2.integrations.HttpLambdaIntegrationProps
 import software.amazon.awscdk.services.lambda.Code
 import software.amazon.awscdk.services.lambda.Function
 import software.amazon.awscdk.services.lambda.FunctionProps
@@ -45,9 +45,9 @@ class RobokashStack(scope: Construct, id: String) : Stack(scope, id) {
             .build()
     )
 
-    val lambdaIntegration = LambdaProxyIntegration(
-        LambdaProxyIntegrationProps.builder()
-            .handler(slackEventHandler)
+    val lambdaIntegration = HttpLambdaIntegration("LambdaIntegration",
+        slackEventHandler,
+        HttpLambdaIntegrationProps.builder()
             // VERSION_1_0 maintains the original case of HTTP headers.
             .payloadFormatVersion(PayloadFormatVersion.VERSION_1_0)
             .build()

@@ -4,7 +4,6 @@ import com.github.goodwillparking.robokash.slack.UserId
 import com.github.goodwillparking.robokash.util.DefaultSerializer
 import com.github.goodwillparking.robokash.util.ResourceUtil.loadTextResource
 import io.kotest.assertions.asClue
-import io.kotest.core.datatest.forAll
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.should
@@ -16,11 +15,16 @@ import kotlin.reflect.KClass
 internal class EventSerializationTest : FreeSpec({
 
     "events should deserialize" - {
-        forAll<EventSetup<*>>(
+        listOf(
             "url-verification" to { EventSetup(it, UrlVerification::class) },
             "event-callback" to EventSetup("message", EventCallback::class),
             "unknown" to EventSetup("app-requested", UnknownEvent::class)
-        ) { (fileName, eventType) -> deserializeFromFile(fileName, eventType) }
+        ).forEach { (name, setup) ->
+            name {
+                val (fileName, eventType) = setup
+                deserializeFromFile(fileName, eventType)
+            }
+        }
     }
 
     "inner events should deserialize" - {

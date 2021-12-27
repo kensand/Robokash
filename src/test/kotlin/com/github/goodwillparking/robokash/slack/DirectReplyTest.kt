@@ -6,7 +6,6 @@ import com.github.goodwillparking.robokash.slack.SlackEventHandlerTestUtils.CHAT
 import com.github.goodwillparking.robokash.slack.SlackEventHandlerTestUtils.SENDER
 import com.github.goodwillparking.robokash.slack.SlackEventHandlerTestUtils.testHandler
 import io.kotest.core.spec.style.FreeSpec
-import io.kotest.core.datatest.forAll
 
 internal class DirectReplyTest : FreeSpec({
 
@@ -62,26 +61,31 @@ internal class DirectReplyTest : FreeSpec({
             val expectedReply: String? = null
         )
 
-        forAll<Setup>(
+        listOf(
             "above" to Setup(0.81, isMention = false, shouldReply = true, "pig"),
             "below" to Setup(0.79, isMention = false, shouldReply = false),
             "above mention" to Setup(0.81, isMention = true, shouldReply = true, "pig"),
             // Always replies with something on a mention
             "below mention" to Setup(0.79, isMention = true, shouldReply = true),
-        ) { (roll, isMention, shouldReply, expectedReply) ->
-            with(testHandler(
-                maxReplyProbability = if (!isMention) 1.0 else 0.0,
-                maxMentionReplyProbability = if (isMention) 1.0 else 0.0,
-                // only one response, so probability should be reduced to 1/5 the original value
-                maxReplyProbabilityThreshold = 5,
-                responses = responses,
-                replyConfig = listOf(userConfig))
-            ) {
-                if (shouldReply) expectSuccessfulPost(expectedReply)
-                expectRoll(roll)
+        ).forEach { (name, setup) ->
+            val (roll, isMention, shouldReply, expectedReply) = setup
+            name {
+                with(
+                    testHandler(
+                        maxReplyProbability = if (!isMention) 1.0 else 0.0,
+                        maxMentionReplyProbability = if (isMention) 1.0 else 0.0,
+                        // only one response, so probability should be reduced to 1/5 the original value
+                        maxReplyProbabilityThreshold = 5,
+                        responses = responses,
+                        replyConfig = listOf(userConfig)
+                    )
+                ) {
+                    if (shouldReply) expectSuccessfulPost(expectedReply)
+                    expectRoll(roll)
 
-                handle(createRequest(if(isMention) CHAT_MESSAGE_MENTION else CHAT_MESSAGE))
-                if (shouldReply) verifySuccessfulPost(expectedReply)
+                    handle(createRequest(if (isMention) CHAT_MESSAGE_MENTION else CHAT_MESSAGE))
+                    if (shouldReply) verifySuccessfulPost(expectedReply)
+                }
             }
         }
     }
