@@ -8,3 +8,11 @@ raw-messages.json
 message-filter.json
 responses.json
 user-specific-responses.json
+node_modules
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
+# CDK stacks
+stack-creation.ts
